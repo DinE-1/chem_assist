@@ -375,10 +375,10 @@ class main_menu_page(Gtk.ApplicationWindow):
         message_box.append(self.message_label)
 
         #buttons
-        reactions_button=Gtk.Button.new_with_label("Reactions")
-        quiz_button=Gtk.Button.new_with_label("Quiz")
-        quit_button=Gtk.Button.new_with_label("Quit")
-        simulator_button=Gtk.Button.new_with_label("Simulate")
+        reactions_button=Gtk.Button.new_with_label("reactions")
+        quiz_button=Gtk.Button.new_with_label("quiz")
+        quit_button=Gtk.Button.new_with_label("quit")
+        simulator_button=Gtk.Button.new_with_label("search reaction")
         settings_button=Gtk.Button.new()
 
         #add buttons to box
@@ -890,8 +890,168 @@ class add_reaction_to_db_page(Gtk.ApplicationWindow):
         #open previous window
         previous_window=self.props.application.window_history[-2]
         self.props.application.open_page(None,previous_window)
+
 class simulator_page(Gtk.ApplicationWindow):
+    message_box=True
     def __init__(self,*args,**kwargs):
-        super().__init__(*args,**kwargs,title="Simulator")
+        super().__init__(*args,**kwargs,title="simulate")
         header_bar.set_titlebar(header_bar,self)
-        reaction_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,0)
+
+        main_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,5)
+        self.set_child(main_box)
+
+        #reactants box
+        reactants_box_scroll=Gtk.ScrolledWindow.new()
+        reactants_box_scroll.set_propagate_natural_height(True)
+        self.reactants_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,5)
+        reactants_box_scroll.set_child(self.reactants_box)
+        main_box.append(reactants_box_scroll)
+
+        self.reactants_count = 0
+        #add the first entry
+        self.add_reactant_entry(None)
+        
+        #add reactants button
+        add_reactants_button=Gtk.Button.new_with_label("+")
+        add_reactants_button.set_halign(Gtk.Align.CENTER)
+        add_reactants_button.connect('clicked',self.add_reactant_entry)
+        main_box.append(add_reactants_button)
+        #search button
+        search_button=Gtk.Button.new_with_label("search")
+        search_button.set_halign(Gtk.Align.CENTER)
+        search_button.set_valign(Gtk.Align.END)
+        search_button.set_vexpand(True)
+        search_button.connect('clicked',self.display_products)
+
+        main_box.append(search_button)
+
+        #message box
+        self.message_label=Gtk.Label.new()
+        self.message_label.set_valign(Gtk.Align.END)
+        main_box.append(self.message_label)
+    
+    def add_reactant_entry(self,caller_obj):
+        self.reactants_count+=1
+        reactant_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
+
+        label=Gtk.Label.new("Reactant "+str(self.reactants_count)+": ")
+        reactant_box.append(label)
+
+        buffer=Gtk.EntryBuffer.new(None,-1)
+        entry=Gtk.Entry.new_with_buffer(buffer)
+        entry.set_hexpand(True)
+        reactant_box.append(entry)
+
+        self.reactants_box.append(reactant_box)
+
+    def search_reaction(self):
+        #get text from reactants box
+        reactants=[]
+
+        reactant_box=self.reactants_box.get_first_child()
+        while reactant_box != None:
+            entry=reactant_box.get_last_child()
+            reactant=entry.get_buffer().get_text()
+
+            #add reactant to list if its not empty
+            if reactant != "" :
+                reactants.append(reactant)
+
+            #get next reactant entry
+            reactant_box=reactant_box.get_next_sibling()
+
+        #join reactants into string seperated by +
+        reactants_string="+".join(reactants)
+
+        #database cursor and reactions table
+        if self.get_database_cursor() == False or self.search_for_reactions_table() == False:
+            return False
+        
+        #find the reaction
+        search_command=f"select * from reactions where reactants='{reactants_string}'"
+        self.props.application.db_cursor.execute(search_command)
+        result=self.props.application.db_cursor.fetchone()
+        
+        if result == None:
+            self.display('reaction not found')
+            return None
+        result_reaction_string=result[1]
+        if result_reaction_string == reactants_string:
+            self.display("reaction found")
+        else:
+            self.display("???unknown case")
+            return False
+        return result
+
+    #display the products on screen
+    def display_products(self,caller_obj):
+        result=self.search_reaction()
+
+        #exit if reaction not found
+        if result==None:
+            return
+        
+        products_string=result[3]
+        products_label=Gtk.Label.new(products_string)
+
+        self.get_child().insert_child_after(products_label,self.get_child().get_first_child().get_next_sibling())
+
+    #look for reactions table in database
+    def search_for_reactions_table(self):
+        #search for database
+        db_search_sql_command=f"select SCHEMA_NAME from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME='{self.props.application.db_name}'"
+        self.props.application.db_cursor.execute(db_search_sql_command)
+        db_search_result=self.props.application.db_cursor.fetchone()[0]
+        #exit function if database not found
+        if self.search_result_error_handle(db_search_result,self.props.application.db_name,"database") != True:
+            return False
+        
+        self.props.application.db_cursor.execute(f"use {self.props.application.db_name}")
+        
+        #search for table
+        table_name='reactions'
+        reactions_table_search_command=f"select TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = '{self.props.application.db_name}' and TABLE_NAME='{table_name}';"
+        self.props.application.db_cursor.execute(reactions_table_search_command)
+        table_search_result=self.props.application.db_cursor.fetchone()[0]
+        #exit function if table not found
+        if self.search_result_error_handle(table_search_result,table_name,"table") != True:
+            return False
+        return True
+
+    #display message according to search result
+    def search_result_error_handle(self,search_result,search_item,category=""):
+        if search_result == None :
+            message=f"{search_item} {category} not found"
+            self.display(message)
+            return False
+        elif search_result == search_item:
+            message=f"{search_item} {category} found"
+            self.display(message)
+        else:
+            message="??unknown case"
+            print(search_item)
+            print(search_results)
+            self.display(message)
+            return False
+        return True
+    #display a message in console and on gtk window
+    def display(self,message):
+        print(message)
+        self.message_label.set_text(message)
+
+    #get database cursot
+    def get_database_cursor(self):
+        #connect to server
+        server_connect_return=self.props.application.connect_to_db_server()
+        #display error on screen if connection fails
+        if server_connect_return!=True:
+            self.message_label.set_text(str(server_connect_return))
+            return False
+
+        #get cursor
+        get_cursor_return=self.props.application.get_cursor_from_db_connection(self.props.application.database_object)
+        #display error if getting cursor fails
+        if get_cursor_return != True:
+            self.message_label.set_text(str(get_cursor_return))
+            return False
+        return True
