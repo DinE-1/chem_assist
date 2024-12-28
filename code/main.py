@@ -239,7 +239,7 @@ class Application(Gtk.Application):
                 msg_str=f"=>database {self.db_name} found"
                 print(msg_str)
             else:
-                print("Error while CREATING database",err)
+                print("Error while CREATING database:",err)
                 return err
             print(f"=>created database {self.db_name}")
         #use database
@@ -267,6 +267,11 @@ class Application(Gtk.Application):
 
     #connect to database server
     def connect_to_db_server(self):
+
+        #close any existing connection
+        if self.database_object != None and self.database_object.is_connected():
+            self.database_object.close()
+
         #please take backup of database before connecting with path as it may be deleted by this function
         connection_profile={
             "user":self.current_user_action.props.state.get_string(),
