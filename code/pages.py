@@ -54,6 +54,8 @@ class header_bar(Gtk.HeaderBar):
 class welcome_page(Gtk.ApplicationWindow):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs,title="welcome!")
+
+        self.set_decorated(False)
         #event controller
         event_controller=Gtk.EventControllerKey()
         self.add_controller(event_controller)
@@ -349,7 +351,6 @@ class main_menu_page(Gtk.ApplicationWindow):
         main_menu_page_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,0)
         self.set_child(main_menu_page_box)
 
-        self.set_decorated(False)
         #boxes
         #message box
         message_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
@@ -850,6 +851,12 @@ class add_reaction_to_db_page(Gtk.ApplicationWindow):
             values_str=""
             for i in reaction_details_buffers:
                 i=i.get_text()
+
+                #if the string has a space or tab in the end, remove it
+                if i != "":
+                    while i[-1] == " " or i[-1] == '\t' :
+                        i=i[:-1]
+
                 values_str=values_str+"'"+i+"',"
             values_str=values_str[:-1]
             #command insert details in table
@@ -861,15 +868,24 @@ class add_reaction_to_db_page(Gtk.ApplicationWindow):
             products=reaction_details_buffers[2].get_text()
             extra_info=reaction_details_buffers[3].get_text()
             edited_reaction_information=[name,reactants,products,extra_info]
+
             #db query string construct
             reactions_table_command_string="update reactions set"
             reaction_not_edited=True
             for i in range(len(edited_reaction_information)):
+
+                #if the string has a space or tab in the end, remove it
+                if edited_reaction_information[i] != "":
+                    while edited_reaction_information[i][-1] == " " or edited_reaction_information[i][-1] == '\t' :
+                        edited_reaction_information[i]=edited_reaction_information[i][:-1]
+                
+                #if reaction is edited set this variable to false
                 if self.reaction_information[i] != edited_reaction_information[i]:
                     reaction_not_edited=False
-                    #add to the edit command
+                
+                #string for the edited information in sql syntax
                 reactions_table_command_string=reactions_table_command_string+f" {columns[i]}='{edited_reaction_information[i]}',"
-            
+
             #exit if reaction is unedited
             if reaction_not_edited==True:
                 #open previous window
@@ -973,7 +989,7 @@ class simulator_page(Gtk.ApplicationWindow):
         result=self.props.application.db_cursor.fetchone()
         
         if result == None:
-            self.display('reaction not found')
+            self.display(f'{reactants_string} reaction not found')
             return None
         result_reaction_string=result[1]
         if result_reaction_string == reactants_string:
@@ -988,9 +1004,9 @@ class simulator_page(Gtk.ApplicationWindow):
         result=self.search_reaction()
 
         #exit if reaction not found
-        if result==None:
+        if result==None or result==False:
             return
-        
+
         products_string=result[3]
         products_label=Gtk.Label.new(products_string)
 
