@@ -1,6 +1,3 @@
-/* window{
-    background-color: rgba(5, 62, 3, 0.657);
-} */
 window{
     background-image:linear-gradient(purple,rgb(47, 0, 255));
 }
@@ -23,7 +20,6 @@ button:hover{
 }
 button.start_quiz_button{
     background:rgba(44, 128, 202, 0);
-    background-image: url(../pictures/settings.svg);
     color: aquamarine;
     border-radius: 200px;
 }
@@ -37,7 +33,7 @@ button.icon_button{
     background: rgba(255, 255, 0, 0);
 }
 button.icon_button:hover{
-    background:rgba(0, 255, 217, 0.244);
+    background-color:rgba(0, 255, 217, 0.244);
 }
 label{
     color:rgb(244, 209, 209);
@@ -55,4 +51,3 @@ listview{
 scrollbar{
     color:yellow;
 }
-@import url("images.css");

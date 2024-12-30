@@ -1,0 +1,36 @@
+window{
+    background-color:black;
+}
+headerbar{
+    background: black;
+}
+columnview{
+    background: black;
+}
+button{
+    background:rgb(38, 28, 50);
+}
+button.icon_button{
+    background: rgba(0, 0, 0, 0);
+}
+button.close{
+    background-color: rgb(198, 0, 0);
+}
+button.maximize, button.minimize, button.close{
+    color:rgb(79, 113, 99);
+}
+button:hover{
+    background:rgb(26, 33, 95);
+}
+button.start_quiz_button:hover{
+    background:rgb(76, 87, 186);
+}
+label{
+    color:rgb(218, 217, 217);
+}
+entry{
+    background:rgb(70, 67, 67);
+}
+check{
+    background: rgb(58, 52, 52);
+}

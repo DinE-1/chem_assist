@@ -148,18 +148,84 @@ class settings_page(Gtk.ApplicationWindow):
         self.settings_box.append(label)
         self.props.title="settings/appearance"
 
-        #buttons
+        seperator=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
+        seperator2=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
+        #shapes
+        shapes_settings_label=Gtk.Label.new("shapes:")
+        shapes_settings_label.set_halign(Gtk.Align.START)
+        self.settings_box.append(shapes_settings_label)
+        shape_buttons_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
+        self.settings_box.append(shape_buttons_box)
+        #default shapes button
+        default_shapes_button=Gtk.CheckButton.new_with_label("default")
+        default_shapes_button.set_action_name('app.shapes')
+        default_shapes_button.set_action_target_value(GLib.Variant.new_string(''))
+        shape_buttons_box.append(default_shapes_button)
+        #round shapes button
+        round_shapes_button=Gtk.CheckButton.new_with_label("round")
+        round_shapes_button.set_action_name('app.shapes')
+        round_shapes_button.set_action_target_value(GLib.Variant.new_string(self.props.application.css_files_paths['round_css']))
+        round_shapes_button.set_group(default_shapes_button)
+        shape_buttons_box.append(round_shapes_button)
+        
+        #add seperator
+        self.settings_box.append(seperator)
+
+        #colors
+        colors_settings_label=Gtk.Label.new("colors:")
+        colors_settings_label.set_halign(Gtk.Align.START)
+        self.settings_box.append(colors_settings_label)
+        colors_buttons_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
+        self.settings_box.append(colors_buttons_box)
+        #default colors button
+        default_colors_button=Gtk.CheckButton.new_with_label("default")
+        default_colors_button.set_action_name('app.colors')
+        default_colors_button.set_action_target_value(GLib.Variant.new_string(''))
+        colors_buttons_box.append(default_colors_button)
+        #dark mode button
+        dark_mode_button=Gtk.CheckButton.new_with_label("dark")
+        dark_mode_button.set_action_name('app.colors')
+        dark_mode_button.set_action_target_value(GLib.Variant.new_string(self.props.application.css_files_paths['black_shade_css']))
+        dark_mode_button.set_group(default_colors_button)
+        colors_buttons_box.append(dark_mode_button)
+        #colorful mode button
+        colors_mode_button=Gtk.CheckButton.new_with_label("colorful")
+        colors_mode_button.set_action_name('app.colors')
+        colors_mode_button.set_action_target_value(GLib.Variant.new_string(self.props.application.css_files_paths['colorful_css']))
+        colors_mode_button.set_group(default_colors_button)
+        colors_buttons_box.append(colors_mode_button)
+        
+        #add seperator
+        self.settings_box.append(seperator2)
+
+        #button images
+        images_settings_label=Gtk.Label.new("button icons:")
+        images_settings_label.set_halign(Gtk.Align.START)
+        self.settings_box.append(images_settings_label)
+        images_buttons_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
+        self.settings_box.append(images_buttons_box)
+        #no images button
+        button_images_no_button=Gtk.CheckButton.new_with_label("no")
+        button_images_no_button.set_action_name('app.images')
+        button_images_no_button.set_action_target_value(GLib.Variant.new_string(''))
+        images_buttons_box.append(button_images_no_button)
+        #yes images button
+        button_images_yes_button=Gtk.CheckButton.new_with_label("yes")
+        button_images_yes_button.set_action_name('app.images')
+        button_images_yes_button.set_action_target_value(GLib.Variant.new_string(self.props.application.css_files_paths['images_css']))
+        button_images_yes_button.set_group(button_images_no_button)
+        images_buttons_box.append(button_images_yes_button)
+
         styles_css_checkbox=Gtk.CheckButton.new_with_label("remove other styles")
         white_mode_css_checkbox=Gtk.CheckButton.new_with_label("white mode")
+  
         #add to box
         self.settings_box.append(styles_css_checkbox)
         self.settings_box.append(white_mode_css_checkbox)
-        #button states
-        styles_css_checkbox.props.active=not self.props.application.current_styles["other_styles"]
-        white_mode_css_checkbox.props.active= not self.props.application.current_styles["colors"]
+
         #button functions
-        styles_css_checkbox.connect('toggled',self.toggle_styles,[(self.props.application.other_styles_css_provider,"other_styles")])
-        white_mode_css_checkbox.connect('toggled',self.toggle_styles,[(self.props.application.colors_css_provider,"colors")])
+        styles_css_checkbox.connect('toggled',self.change_styles,(self.props.application.style_preference["shapes"],"shapes"))
+        white_mode_css_checkbox.connect('toggled',self.change_styles,(self.props.application.style_preference["colors"],"colors"))
     #database settings
     def db_settings_display(self,caller_obj):
         self.reload()
@@ -237,15 +303,14 @@ class settings_page(Gtk.ApplicationWindow):
         remove_user_button.connect('clicked',self.remove_current_user,users_buttons_scroller)
 
     #change appearance
-    def toggle_styles(self,check_button,style_providers_list):
+    def change_styles(self,check_button,style_providers_list):
         if check_button.props.active == False:
-            for (style_provider,style_name) in style_providers_list:
-                Gtk.StyleContext.add_provider_for_display(self.props.application.default_display,style_provider,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-                self.props.application.current_styles[style_name]=True
+            self.props.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(style_providers_list[0]))
+            self.props.application.style_preference[style_providers_list[1]]=style_providers_list[0]
         else:
-            for style_provider,style_name in style_providers_list:
-                Gtk.StyleContext.remove_provider_for_display(self.props.application.default_display,style_provider)
-                self.props.application.current_styles[style_name]=False
+            self.props.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(''))
+            self.props.application.style_preference[style_providers_list[1]]=style_providers_list[0]
+        self.props.application.reload_styles()
     #edit database name
     def on_db_name_edit_button_click(self,caller_obj,db_entry,db_entry_buffer,db_dir_box):
         #change mode allow editing
@@ -258,7 +323,7 @@ class settings_page(Gtk.ApplicationWindow):
         db_dir_box.append(save_button)
         #button functions
         save_button.connect('clicked',self.db_name_save_button_click,db_entry_contents,db_dir_box,db_entry,caller_obj)
-        #save the new database name
+
     #save the new database name
     def db_name_save_button_click(self,caller_obj,db_entry_contents,db_dir_box,db_entry,edit_button):
         self.props.application.db_name=db_entry_contents
@@ -272,6 +337,7 @@ class settings_page(Gtk.ApplicationWindow):
         db_connection_status=self.props.application.connect_to_db_server_and_create_db()
         if db_connection_status == True:
             self.message_label.set_text("cursor available!")            
+
     #on user button action state change
     def on_user_button_action_state_change(*args):
         print("state changed",args)
@@ -309,7 +375,7 @@ class settings_page(Gtk.ApplicationWindow):
             self.messages_box.append(Gtk.Label.new("No current user!"))
             return
         if current_user not in self.props.application.users:
-            print("ERROR:Current user not in users,user removed")
+            print("ERROR:Current user not in users dictionary")
             return
         del self.props.application.users[current_user]
         self.props.application.current_user_action.set_state(GLib.Variant.new_string(""))
@@ -882,7 +948,7 @@ class add_reaction_to_db_page(Gtk.ApplicationWindow):
                 #if reaction is edited set this variable to false
                 if self.reaction_information[i] != edited_reaction_information[i]:
                     reaction_not_edited=False
-                
+
                 #string for the edited information in sql syntax
                 reactions_table_command_string=reactions_table_command_string+f" {columns[i]}='{edited_reaction_information[i]}',"
 

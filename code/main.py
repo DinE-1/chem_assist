@@ -54,6 +54,8 @@ class Application(Gtk.Application):
     window_history_limit=10
     window_history=[]
 
+    #user preferences file name
+    preference_file_name="user_preferences_chem_assist.conf"
     #default display
     default_display=Gdk.Display.get_default()
 
@@ -65,14 +67,27 @@ class Application(Gtk.Application):
     css_dir=os.path.join(current_file_dir_parent,'styles')
     pics_dir=os.path.join(current_file_dir_parent,"pictures")
 
-    #css file
-    css_files_path={
-        "styles":os.path.join(css_dir,"styles.css"),
-        "colors":os.path.join(css_dir,"colors.css")
+    #appearance(css)
+    css_files_paths={
+        "round_css":os.path.join(css_dir,'shape','rounded_edges.css'),
+        'colorful_css':os.path.join(css_dir,"color","colors.css"),
+        'black_shade_css':os.path.join(css_dir,'color','black_shade.css'),
+        'images_css':os.path.join(css_dir,"images.css")
+    }
+    style_preference={
+        "shapes":css_files_paths["round_css"],
+        "colors":css_files_paths['colorful_css'],
+        "images":css_files_paths['images_css']
+    }    #set the style preference dictionary with some default preferences
+    style_preference_default={
+        "shapes":css_files_paths["round_css"],
+        "colors":css_files_paths['colorful_css'],
+        "images":css_files_paths['images_css']
     }
     other_styles_css_provider=Gtk.CssProvider.new()
     colors_css_provider=Gtk.CssProvider.new()
-    current_styles={"other_styles":False,"colors":False}
+    images_css_provider=Gtk.CssProvider.new()
+    current_css_providers={"shapes":other_styles_css_provider,"colors":colors_css_provider,"images":images_css_provider}
 
     #database
     db_name="chem_assist_db1"
@@ -90,27 +105,43 @@ class Application(Gtk.Application):
     def __init__(self):
         super().__init__(application_id="com.chem_assist_project.chem_assist")
         self.connect('activate',self.on_activate)
-        print(self.current_file_dir_parent)
+        self.connect('shutdown',self.on_close)
     #on activate app
     def on_activate(self,app):
         print("activated")
+
+        #load preferences from the preferences file
+        self.load_preference()
 
         #get monitor dimentions
         self.primary_monitor=self.default_display.get_monitors()[0]
         self.get_monitor_dimentions(self.primary_monitor)
         #load css files
-        self.other_styles_css_provider.load_from_path(self.css_files_path["styles"])
-        self.colors_css_provider.load_from_path(self.css_files_path["colors"])
-        self.add_styles_from_css_providers([self.other_styles_css_provider,self.colors_css_provider])
+        self.reload_styles()
 
-        #define actions
+        ##define actions
         quit_action=Gio.SimpleAction.new("quit",None)
         quit_action.connect('activate',self.close_page)
         self.add_action(quit_action)
 
+        #current user action
         self.current_user_action=Gio.SimpleAction.new_stateful("current_user",GLib.VariantType.new("s"),GLib.Variant.new_string("chem_assist_user"))
         self.add_action(self.current_user_action)
-        
+
+        #appearance actions
+        app_colors_action=Gio.SimpleAction.new_stateful('colors',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference["colors"]))
+        self.add_action(app_colors_action)
+        app_colors_action.connect('activate',self.css_reload_and_change_action_state)
+
+        shapes_action=Gio.SimpleAction.new_stateful('shapes',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference['shapes']))
+        self.add_action(shapes_action)
+        shapes_action.connect('activate',self.css_reload_and_change_action_state)
+
+        button_images_action = Gio.SimpleAction.new_stateful('images',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference['images']))
+        self.add_action(button_images_action)
+        button_images_action.connect('change_state',self.css_reload_and_change_action_state)
+
+        #page opening actions
         open_reactions_page_action=Gio.SimpleAction.new("open_reactions_page",None)
         open_reactions_page_action.connect('activate',self.on_open_reactions_page)
         self.add_action(open_reactions_page_action)
@@ -123,12 +154,48 @@ class Application(Gtk.Application):
         open_quiz_action.connect('activate',self.open_quiz)
         self.add_action(open_quiz_action)
 
+        #connect to database action
         self.connect_to_db_action=Gio.SimpleAction.new("connect_to_db",None)
         self.connect_to_db_action.connect('activate',self.connect_to_db)
         self.add_action(self.connect_to_db_action)
 
         #open welcome page
         self.open_page(None,pages.welcome_page)
+    
+    #load saved preference from file
+    def load_preference(self):
+        #open and read the preferences file
+        try:
+            preference_file=open(os.path.join(os.path.dirname(os.path.dirname(__file__)),self.preference_file_name),'r')
+        except Exception as err:
+            print("Error opening preferences file",err)
+            return False
+        preferences=preference_file.read()
+        preference_file.close()
+
+        #do no process further is no preferences are detected
+        if len(preferences) == 0 or preferences=="":
+            return
+        preferences=preferences.split('\n')
+        #save the preferences in the form of preference=value into a dictionary as preference:value
+        preference_dict={}
+        for preference in preferences:
+            #ignore lines starting with #
+            if preference[0] == "#":
+                continue
+            
+            #seperate the preference and value into a list
+            preference=preference.split('=')
+
+            #remove the quotes by removing the first and last character of the string
+            preference[1]=preference[1][1:-1]
+
+            if preference[1]==None:
+                preference[1]=''
+            preference_dict[preference[0]]=preference[1]
+
+        self.style_preference.update(preference_dict)
+        return preference_dict
 
     #pages open
     #reactions page open
@@ -202,11 +269,23 @@ class Application(Gtk.Application):
         self.monitor_width=monitor_geometry.width
         self.monitor_height=monitor_geometry.height
     #load styles to context
-    def add_styles_from_css_providers(self,css_providers):
-        for css_provider in css_providers:
+    def reload_styles(self):
+        for category,css_provider in self.current_css_providers.items():
+            #if no style preference then remove from context
+            if self.style_preference[category] == '':
+                Gtk.StyleContext.remove_provider_for_display(self.default_display,self.current_css_providers[category])
+                continue
+            #load the css files to css provider
+            self.current_css_providers[category].load_from_path(self.style_preference[category])
+            #add css provider to context
             Gtk.StyleContext.add_provider_for_display(self.default_display,css_provider,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-        self.current_styles["colors"]=True
-        self.current_styles["other_styles"]=True
+    def css_reload_and_change_action_state(self,caller_action,state):
+        #set the action state
+        caller_action.set_state(state)
+        #change the preference
+        self.style_preference[caller_action.props.name]=state.get_string()
+        #reload styles to apply the new style preference
+        self.reload_styles()
 
     ##database
     #database connect and use
@@ -319,6 +398,32 @@ class Application(Gtk.Application):
                 print("eror while creating table \"reactions\"", err)
                 return err
         print("=>created table 'reactions'")
+        return True
+    #save preferences while closing application
+    def on_close(self,caller_object):
+        #save the changed style preferences into a file
+        preference_string=""
+        for style,value in self.style_preference.items():
+            if value != self.style_preference_default[style]:
+                preference_string=preference_string+ '\n' + style + "='" + value + "'"
+        preference_string=preference_string[1:]
+        #write preferences to file
+        self.write_string_to_file(preference_string)
+    
+    def write_string_to_file(self,string):
+        #write a string to the preferences file
+        try:
+            #open file
+            preference_file=open(self.preference_file_name,'w')
+        except Execption as e:
+            print(e)
+            return False
+        try:
+            #write to file
+            preference_file.write(string)
+        except Exeption as e:
+            print(e)
+            return False
         return True
 
 #Create an instance of Application class

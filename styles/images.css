@@ -3,9 +3,6 @@ button.icon_button{
     background-repeat: no-repeat;
     background-position: center;
 }
-button.icon_button:hover{
-    background-color:aqua;
-}
 button.settings_button{
     background-image:url("../pictures/settings.svg");
 }
@@ -14,4 +11,7 @@ button.back_button{
 }
 button.refresh_button{
     background-image: url("../pictures/refresh_button.svg");
+}
+button.start_quiz_button{
+    background-image: url(../pictures/settings.svg);
 }
