@@ -5,49 +5,6 @@ from mysql.connector import errorcode
 import pages
 import quiz
 
-#construct dictionary from css file
-def read_css_file(css_file_path):
-    css_file=open(css_file_path,"r")
-    css_file_contents=css_file.read()
-    print(css_file_contents)
-    mode="element"
-    css_dict={}
-
-    element=""
-    key=""
-    value=""
-    for a in css_file_contents:
-        #ignore lines starting with @
-        if a=="@":
-            mode="ignore"
-        if mode=="ignore" and a==";":
-            mode="element"
-            continue
-        #ignore whitespace character
-        if a in [" ","\t","\n"] or mode=="ignore":
-            continue
-        #make the dictionary
-        if a not in ["{","}",";",":"]:
-            if mode=="element":
-                element=element+a
-            elif mode=="key":
-                key=key+a
-            elif mode=="value":
-                value=value+a
-        if a=="{":
-            css_dict[element]={}
-            mode="key"
-        if a==":":
-            mode="value"
-        if a==";":
-            css_dict[element][key]=value
-            key,value="",""
-            mode="key"
-        if a=="}":
-            element=""
-            mode="element"
-    return css_dict
-
 #custom gtk application class containing helpful definitions
 class Application(Gtk.Application):
     #window history
@@ -56,39 +13,9 @@ class Application(Gtk.Application):
 
     #user preferences file name
     preference_file_name="user_preferences_chem_assist.conf"
-    #default display
-    default_display=Gdk.Display.get_default()
 
-    current_file_path=__file__
-    current_file_dir_parent=os.path.split(os.path.split(current_file_path)[0])[0] #get the parent directory of this file's directory
-    if getattr(sys,'frozen',False):
-        current_file_dir_parent=sys._MEIPASS
-    #folder for styles,pictures
-    css_dir=os.path.join(current_file_dir_parent,'styles')
-    pics_dir=os.path.join(current_file_dir_parent,"pictures")
-
-    #appearance(css)
-    css_files_paths={
-        "round_css":os.path.join(css_dir,'shape','rounded_edges.css'),
-        'colorful_css':os.path.join(css_dir,"color","colors.css"),
-        'black_shade_css':os.path.join(css_dir,'color','black_shade.css'),
-        'images_css':os.path.join(css_dir,"images.css")
-    }
-    style_preference={
-        "shapes":css_files_paths["round_css"],
-        "colors":css_files_paths['colorful_css'],
-        "images":css_files_paths['images_css']
-    }    #set the style preference dictionary with some default preferences
-    style_preference_default={
-        "shapes":css_files_paths["round_css"],
-        "colors":css_files_paths['colorful_css'],
-        "images":css_files_paths['images_css']
-    }
-    other_styles_css_provider=Gtk.CssProvider.new()
-    colors_css_provider=Gtk.CssProvider.new()
-    images_css_provider=Gtk.CssProvider.new()
-    current_css_providers={"shapes":other_styles_css_provider,"colors":colors_css_provider,"images":images_css_provider}
-
+    #user customised css file name
+    user_custom_css_file_name='custom.css'
     #database
     db_name="chem_assist_db1"
     db_cursor=None
@@ -101,6 +28,43 @@ class Application(Gtk.Application):
     #columns for reactions table in database
     reactions_table_columns=("name","reactants","products","extra_info")
 
+    current_file_path=__file__
+    current_file_dir_parent=os.path.split(os.path.split(current_file_path)[0])[0] #get the parent directory of this file's directory
+    #detect file paths even when running in a compiled environment
+    if getattr(sys,'frozen',False):
+        current_file_dir_parent=sys._MEIPASS
+    #folder for styles,pictures
+    css_dir=os.path.join(current_file_dir_parent,'styles')
+    pics_dir=os.path.join(current_file_dir_parent,"pictures")
+
+    #default display
+    default_display=Gdk.Display.get_default()
+    #appearance(css)
+    css_files_paths={
+        "round_css":os.path.join(css_dir,'shape','rounded_edges.css'),
+        'colorful_css':os.path.join(css_dir,"color","colors.css"),
+        'black_shade_css':os.path.join(css_dir,'color','black_shade.css'),
+        'images_css':os.path.join(css_dir,"images.css"),
+        'custom_css':os.path.join(css_dir,user_custom_css_file_name)
+    }
+    style_preference={
+        "shapes":css_files_paths["round_css"],
+        "colors":css_files_paths['colorful_css'],
+        "images":css_files_paths['images_css'],
+        'custom_css':css_files_paths['custom_css']
+    }    #set the style preference dictionary with some default preferences
+    style_preference_default={
+        "shapes":css_files_paths["round_css"],
+        "colors":css_files_paths['colorful_css'],
+        "images":css_files_paths['images_css'],
+        'custom_css':css_files_paths['custom_css']
+    }
+    other_styles_css_provider=Gtk.CssProvider.new()
+    colors_css_provider=Gtk.CssProvider.new()
+    images_css_provider=Gtk.CssProvider.new()
+    custom_css_provider=Gtk.CssProvider.new()
+    current_css_providers={"shapes":other_styles_css_provider,"colors":colors_css_provider,"images":images_css_provider,"custom_css":custom_css_provider}
+
     #this function's code executed automatically
     def __init__(self):
         super().__init__(application_id="com.chem_assist_project.chem_assist")
@@ -111,7 +75,8 @@ class Application(Gtk.Application):
         print("activated")
 
         #load preferences from the preferences file
-        self.load_preference()
+        preference_dict=self.load_preference()
+        self.update_settings(preference_dict)
 
         #get monitor dimentions
         self.primary_monitor=self.default_display.get_monitors()[0]
@@ -139,8 +104,12 @@ class Application(Gtk.Application):
 
         button_images_action = Gio.SimpleAction.new_stateful('images',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference['images']))
         self.add_action(button_images_action)
-        button_images_action.connect('change_state',self.css_reload_and_change_action_state)
+        button_images_action.connect('activate',self.css_reload_and_change_action_state)
 
+        custom_css_action=Gio.SimpleAction.new_stateful('custom_css',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference['custom_css']))
+        self.add_action(custom_css_action)
+        custom_css_action.connect('activate',self.css_reload_and_change_action_state)
+        
         #page opening actions
         open_reactions_page_action=Gio.SimpleAction.new("open_reactions_page",None)
         open_reactions_page_action.connect('activate',self.on_open_reactions_page)
@@ -194,9 +163,20 @@ class Application(Gtk.Application):
                 preference[1]=''
             preference_dict[preference[0]]=preference[1]
 
-        self.style_preference.update(preference_dict)
         return preference_dict
-
+    #update the existing settings from a dictionary class
+    def update_settings(self,update_dict):
+        if update_dict==None:
+            return
+        #css
+        for style_name in self.style_preference.keys():
+            try:
+                update_dict[style_name]
+                self.style_preference[style_name] = update_dict[style_name]
+            except KeyError as err:
+                print(f'default setting for {style_name}')
+            except Exception as e:
+                print(e)
     #pages open
     #reactions page open
     def on_open_reactions_page(self,caller_action,param):
@@ -425,7 +405,61 @@ class Application(Gtk.Application):
             print(e)
             return False
         return True
-
+    #construct dictionary from css file
+    def read_css(self,css_file_contents):
+        css_dict={}
+        mode="element"
+        tmp_mode=''
+        prev_mode=''
+        element=""
+        key=""
+        value=""
+        for a in css_file_contents:
+            #ignore whitespace character
+            if a in [" ","\t","\n"]:
+                continue
+            #ignore comments starting with /* and anding with */
+            if a=='/':
+                tmp_mode='suspect_comment'
+            if tmp_mode=='suspect_comment' and a=='*':
+                prev_mode=mode
+                mode='comment'
+                tmp_mode=''
+            if mode=='comment' and a=='*':
+                tmp_mode='suspect_end_comment'
+            if mode=='comment' and tmp_mode == 'suspect_comment_end' and a=='/':
+                tmp_mode=''
+                mode=prev_mode
+            #ignore lines starting with @ (used in import statements)
+            if a=="@" and mode!='comment':
+                mode="ignore"
+            if mode=="ignore" and a==";":
+                mode="element"
+                continue
+            #do not process if mode is set to 'ignore'
+            if mode=='ignore' or mode=='comment':
+                continue
+            #make the dictionary
+            if a not in ["{","}",";",":"]:
+                if mode=="element":
+                    element=element+a
+                elif mode=="key":
+                    key=key+a
+                elif mode=="value":
+                    value=value+a
+            if a=="{":
+                css_dict[element]={}
+                mode="key"
+            if a==":":
+                mode="value"
+            if a==";":
+                css_dict[element][key]=value
+                key,value="",""
+                mode="key"
+            if a=="}":
+                element=""
+                mode="element"
+        return css_dict
 #Create an instance of Application class
 app=Application()
 app.run(None)

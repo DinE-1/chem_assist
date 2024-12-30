@@ -1,6 +1,16 @@
-import gi,mysql.connector
+import os,gi,mysql.connector
 gi.require_version("Gtk","4.0")
 from gi.repository import Gtk,Gio,GObject,GLib
+
+#read a file
+def read_file(file_path):
+    try:
+        file=open(file_path,'r')
+    except Exception as e:
+        print(e)
+    file_contents=file.read()
+    file.close()
+    return file_contents
 
 #return the list of children of a widget
 def get_children(parent):
@@ -148,8 +158,6 @@ class settings_page(Gtk.ApplicationWindow):
         self.settings_box.append(label)
         self.props.title="settings/appearance"
 
-        seperator=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
-        seperator2=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
         #shapes
         shapes_settings_label=Gtk.Label.new("shapes:")
         shapes_settings_label.set_halign(Gtk.Align.START)
@@ -169,6 +177,7 @@ class settings_page(Gtk.ApplicationWindow):
         shape_buttons_box.append(round_shapes_button)
         
         #add seperator
+        seperator=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
         self.settings_box.append(seperator)
 
         #colors
@@ -196,6 +205,7 @@ class settings_page(Gtk.ApplicationWindow):
         colors_buttons_box.append(colors_mode_button)
         
         #add seperator
+        seperator2=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
         self.settings_box.append(seperator2)
 
         #button images
@@ -216,6 +226,50 @@ class settings_page(Gtk.ApplicationWindow):
         button_images_yes_button.set_group(button_images_no_button)
         images_buttons_box.append(button_images_yes_button)
 
+        seperator3=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
+        self.settings_box.append(seperator3)
+
+        #custom css
+        custom_css_label=Gtk.Label.new("custom css:")
+        custom_css_label.set_halign(Gtk.Align.START)
+        self.settings_box.append(custom_css_label)
+        custom_css_buttons_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
+        self.settings_box.append(custom_css_buttons_box)
+        #no custom css button
+        custom_css_no_button=Gtk.CheckButton.new_with_label('no')
+        custom_css_no_button.set_action_name('app.custom_css')
+        custom_css_no_button.set_action_target_value(GLib.Variant.new_string(''))
+        custom_css_buttons_box.append(custom_css_no_button)
+        #yes custom css button
+        custom_css_yes_button=Gtk.CheckButton.new_with_label('yes')
+        custom_css_yes_button.set_group(custom_css_no_button)
+        custom_css_yes_button.set_action_name('app.custom_css')
+        custom_css_yes_button.set_action_target_value(GLib.Variant.new_string(self.props.application.css_files_paths['custom_css']))
+        custom_css_buttons_box.append(custom_css_yes_button)
+        #font size increase or descrease
+        font_size_settings_label=Gtk.Label.new("font size")
+        font_size_settings_label.set_halign(Gtk.Align.START)
+        self.settings_box.append(font_size_settings_label)
+        font_size_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
+        self.settings_box.append(font_size_box)
+
+        font_size_storage=Gtk.EntryBuffer.new(self.get_font_size(),-1)
+        self.font_size_text_box=Gtk.Entry.new_with_buffer(font_size_storage)
+        font_size_box.append(self.font_size_text_box)
+
+        increase_button=Gtk.Button.new_with_label('+')
+        increase_button.connect('clicked',self.change_font_size,'increase')
+        font_size_box.append(increase_button)
+
+        decrease_button=Gtk.Button.new_with_label('-')
+        decrease_button.connect('clicked',self.change_font_size,'decrease')
+        font_size_box.append(decrease_button)
+
+        #add seperator
+        seperator4=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
+        self.settings_box.append(seperator4)
+
+        #general settings
         styles_css_checkbox=Gtk.CheckButton.new_with_label("remove other styles")
         white_mode_css_checkbox=Gtk.CheckButton.new_with_label("white mode")
   
@@ -226,6 +280,68 @@ class settings_page(Gtk.ApplicationWindow):
         #button functions
         styles_css_checkbox.connect('toggled',self.change_styles,(self.props.application.style_preference["shapes"],"shapes"))
         white_mode_css_checkbox.connect('toggled',self.change_styles,(self.props.application.style_preference["colors"],"colors"))
+
+    def change_font_size(self,caller_obj,mode,increase_by_num=1):
+        #get current font size
+        current_font_size=self.font_size_text_box.get_buffer().get_text()
+        if current_font_size[-2:] != 'px':
+            print('please enter font size in pixel(px) unit')
+            current_font_size=self.get_font_size()
+        #convert from pixel(px) unit string to integer
+        try:
+            current_font_size=int(current_font_size[:-2])
+        except Exception as e:
+            print('Enter valid font size',e)
+            current_font_size=self.get_font_size()
+
+        #increase/decrease the font size
+        if mode == "increase":
+            current_font_size=current_font_size+increase_by_num
+        elif mode == "decrease" and current_font_size-increase_by_num>0:
+            current_font_size-=increase_by_num
+        elif mode=='decrease' and current_font_size<=0:
+            print('negative font size')
+        else:
+            print('>unknown mode in increase/decrease font size')
+
+        #set the buffer text in pixel unit
+        self.font_size_text_box.get_buffer().set_text(str(current_font_size)+'px',-1)
+        #update the font size into a custom css file
+        self.update_font_size_to_custom_css_file(current_font_size)
+        self.props.application.reload_styles()
+    #update font size into a custom css file
+    def update_font_size_to_custom_css_file(self,font_size):
+        #open the custom css file to write the new font size
+        try:
+            css_file=open(self.props.application.css_files_paths['custom_css'],'w')
+        except Exception as a:
+            print(a)
+            return
+
+        css_label_string=f'label{{\n\tfont-size:{font_size}px;\n}}\ntext{{\n\tfont-size:{font_size}px;\n}}'
+        #write the font size in pixel units
+        try:
+            css_file.write(css_label_string)
+        except Execption as a:
+            print(a)
+            return
+    #get the font size somehow
+    def get_font_size(self):
+        #read css files to get font size
+        custom_css_file_path=self.props.application.style_preference['custom_css']
+        if os.path.isfile(custom_css_file_path):
+            custom_css_file_contents=read_file(custom_css_file_path)
+            css_dict=self.props.application.read_css(custom_css_file_contents)
+            if css_dict['label'] != None:
+                if css_dict['label']['font-size']!=None:
+                    return css_dict['label']['font-size']
+        css_file_path=self.props.application.css_files_paths['round_css']
+        css_file_contents=read_file(css_file_path)
+        css_dict=self.props.application.read_css(css_file_contents)
+        if css_dict['label'] != None:
+            if css_dict['label']['font-size'] != None:
+                return css_dict['label']['font-size']
+        return ''
     #database settings
     def db_settings_display(self,caller_obj):
         self.reload()
@@ -255,6 +371,7 @@ class settings_page(Gtk.ApplicationWindow):
         self.message_label=Gtk.Label.new(connection_status_message)
         #scrolling support for message text
         message_label_scroll=Gtk.ScrolledWindow.new()
+        message_label_scroll.set_propagate_natural_height(True)
         message_label_scroll.set_child(self.message_label)
 
         #reconnect to database button
