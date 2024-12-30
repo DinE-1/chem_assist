@@ -22,3 +22,6 @@ entry{
     border:none;
     border-radius: 10px;
 }
+text{
+    font-size: 30px;
+}

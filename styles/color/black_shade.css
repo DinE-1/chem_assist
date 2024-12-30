@@ -4,7 +4,7 @@ window{
 headerbar{
     background: black;
 }
-columnview{
+columnview, listview{
     background: black;
 }
 button{
@@ -30,6 +30,7 @@ label{
 }
 entry{
     background:rgb(70, 67, 67);
+    color:rgba(110, 214, 179, 0.834);
 }
 check{
     background: rgb(58, 52, 52);
