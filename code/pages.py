@@ -278,8 +278,8 @@ class settings_page(Gtk.ApplicationWindow):
         self.settings_box.append(white_mode_css_checkbox)
 
         #button functions
-        styles_css_checkbox.connect('toggled',self.change_styles,(self.props.application.style_preference["shapes"],"shapes"))
-        white_mode_css_checkbox.connect('toggled',self.change_styles,(self.props.application.style_preference["colors"],"colors"))
+        styles_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["round_css"],"shapes"))
+        white_mode_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["colorful_css"],"colors"))
 
     def change_font_size(self,caller_obj,mode,increase_by_num=1):
         #get current font size
@@ -426,7 +426,7 @@ class settings_page(Gtk.ApplicationWindow):
             self.props.application.style_preference[style_providers_list[1]]=style_providers_list[0]
         else:
             self.props.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(''))
-            self.props.application.style_preference[style_providers_list[1]]=style_providers_list[0]
+            self.props.application.style_preference[style_providers_list[1]]=''
         self.props.application.reload_styles()
     #edit database name
     def on_db_name_edit_button_click(self,caller_obj,db_entry,db_entry_buffer,db_dir_box):
