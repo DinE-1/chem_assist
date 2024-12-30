@@ -269,14 +269,23 @@ class settings_page(Gtk.ApplicationWindow):
         seperator4=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
         self.settings_box.append(seperator4)
 
-        #general settings
+        #general settings checkboxes
+        #other styles
         styles_css_checkbox=Gtk.CheckButton.new_with_label("remove other styles")
-        white_mode_css_checkbox=Gtk.CheckButton.new_with_label("white mode")
-  
-        #add to box
         self.settings_box.append(styles_css_checkbox)
+        #color styles
+        white_mode_css_checkbox=Gtk.CheckButton.new_with_label("white mode")
         self.settings_box.append(white_mode_css_checkbox)
 
+        #button states
+        if self.props.application.style_preference['shapes'] != '':
+            styles_css_checkbox.props.active=False
+        else:
+            styles_css_checkbox.props.active=True
+        if self.props.application.style_preference['colors']!='':
+            white_mode_css_checkbox.props.active=False
+        else:
+            white_mode_css_checkbox.props.active=True
         #button functions
         styles_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["round_css"],"shapes"))
         white_mode_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["colorful_css"],"colors"))
