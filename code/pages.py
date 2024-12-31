@@ -353,8 +353,10 @@ class settings_page(Gtk.ApplicationWindow):
             css_file_contents=css_file.read()
             existing_css_dict=self.props.application.read_css(css_file_contents)
             css_file.close()
+        except FileNotFoundError as err:
+            print('creating custom css file')
         except Exception as a:
-            print("Error"+a)
+            print("Error"+str(a))
             return
         existing_css_dict.update(css_dict)
         #construct the content to write in the css file
@@ -377,7 +379,7 @@ class settings_page(Gtk.ApplicationWindow):
             css_file.write(css_label_string)
             css_file.close()
         except Exception as a:
-            print("Error"+a)
+            print("Error"+str(a))
             return
 
     #get the font size somehow
@@ -394,6 +396,8 @@ class settings_page(Gtk.ApplicationWindow):
                 return style
             except KeyError as e:
                 print(f'{category}->{style} in custom css file not found')
+            except Exception as e:
+                print(e)
         #rounded_edges css file read
         css_file_path=self.props.application.css_files_paths['round_css']
         css_file_contents=read_file(css_file_path)
@@ -404,6 +408,8 @@ class settings_page(Gtk.ApplicationWindow):
             return style
         except KeyError as e:
             print(f'{category}->{style} not found in rounded_edges css file')
+        except Exception as e:
+            print(e)
 
         print(f'style {style} from {category} not found while searching custom and rounded_edges css files')
         return ''
