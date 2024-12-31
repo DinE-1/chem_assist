@@ -393,8 +393,8 @@ class settings_page(Gtk.ApplicationWindow):
             custom_css_file_contents=read_file(custom_css_file_path)
             css_dict=self.props.application.read_css(custom_css_file_contents)
             try:
-                style=css_dict[category][style]
-                print(f'{category}->{style} found in custom css file')
+                style_value=css_dict[category][style]
+                print(f'{category}->{style}:{style_value} found in custom css file')
                 return style
             except KeyError as e:
                 print(f'{category}->{style} in custom css file not found')
@@ -405,8 +405,8 @@ class settings_page(Gtk.ApplicationWindow):
         css_file_contents=read_file(css_file_path)
         css_dict=self.props.application.read_css(css_file_contents)
         try:
-            style=css_dict[category][style]
-            print(f'{category}->{style} found in rounded_edges file')
+            style_value=css_dict[category][style]
+            print(f'{category}->{style_value}:{style} found in rounded_edges file')
             return style
         except KeyError as e:
             print(f'{category}->{style} not found in rounded_edges css file')
@@ -829,6 +829,7 @@ class reactions_display_page(Gtk.ApplicationWindow):
         self.set_child(reactions_page_box_scroller)
 
         message_box_scroll=Gtk.ScrolledWindow.new()
+        message_box_scroll.set_propagate_natural_height(True)
 
         #boxes
         reactions_page_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
