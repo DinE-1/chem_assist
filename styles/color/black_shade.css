@@ -13,8 +13,9 @@ button{
 button.icon_button{
     background: rgba(0, 0, 0, 0);
 }
-button.close{
+button.close:hover{
     background-color: rgb(198, 0, 0);
+    border-radius: 0px;
 }
 button.maximize, button.minimize, button.close{
     color:rgb(79, 113, 99);

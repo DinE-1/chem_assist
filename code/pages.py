@@ -85,9 +85,11 @@ class welcome_page(Gtk.ApplicationWindow):
 class settings_page(Gtk.ApplicationWindow):
     message_box=True
     open_page=""
+    current_page=''
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs,title="settings")
+        self.current_page=''
 
         header_bar.set_titlebar(header_bar,self,settings=False)
 
@@ -148,11 +150,11 @@ class settings_page(Gtk.ApplicationWindow):
         #open users page window if open_page variable is set to users_page
         if self.open_page=="users_page":
             self.users_display(None)
-            self.open_users_page=False
 
     #appearance settings page
     def appearance_display(self,caller_obj):
         self.reload()
+        self.current_page='appearance_settings'
         label=Gtk.Label.new("Appearance settings")
         label.set_valign(Gtk.Align.START)
         self.settings_box.append(label)
@@ -226,6 +228,7 @@ class settings_page(Gtk.ApplicationWindow):
         button_images_yes_button.set_group(button_images_no_button)
         images_buttons_box.append(button_images_yes_button)
 
+        #add seperator line
         seperator3=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
         self.settings_box.append(seperator3)
 
@@ -271,24 +274,24 @@ class settings_page(Gtk.ApplicationWindow):
 
         #general settings checkboxes
         #other styles
-        styles_css_checkbox=Gtk.CheckButton.new_with_label("remove other styles")
-        self.settings_box.append(styles_css_checkbox)
+        self.styles_css_checkbox=Gtk.CheckButton.new_with_label("remove other styles")
+        self.settings_box.append(self.styles_css_checkbox)
         #color styles
-        white_mode_css_checkbox=Gtk.CheckButton.new_with_label("white mode")
-        self.settings_box.append(white_mode_css_checkbox)
+        self.white_mode_css_checkbox=Gtk.CheckButton.new_with_label("white mode")
+        self.settings_box.append(self.white_mode_css_checkbox)
 
         #button states
         if self.props.application.style_preference['shapes'] != '':
-            styles_css_checkbox.props.active=False
+            self.styles_css_checkbox.props.active=False
         else:
-            styles_css_checkbox.props.active=True
+            self.styles_css_checkbox.props.active=True
         if self.props.application.style_preference['colors']!='':
-            white_mode_css_checkbox.props.active=False
+            self.white_mode_css_checkbox.props.active=False
         else:
-            white_mode_css_checkbox.props.active=True
+            self.white_mode_css_checkbox.props.active=True
         #button functions
-        styles_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["round_css"],"shapes"))
-        white_mode_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["colorful_css"],"colors"))
+        self.styles_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["round_css"],"shapes"))
+        self.white_mode_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["colorful_css"],"colors"))
 
     def change_font_size(self,caller_obj,mode,increase_by_num=1):
         #get current font size
@@ -354,6 +357,7 @@ class settings_page(Gtk.ApplicationWindow):
     #database settings
     def db_settings_display(self,caller_obj):
         self.reload()
+        self.current_page='database_settings'
         self.props.title="settings/database"
         #database directory message display
         db_dir_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
@@ -394,6 +398,7 @@ class settings_page(Gtk.ApplicationWindow):
     #users settings
     def users_display(self,caller_obj):
         self.reload()
+        self.current_page='users_settings'
         self.props.title="settings/users"
 
         users=self.props.application.users
@@ -528,6 +533,7 @@ class settings_page(Gtk.ApplicationWindow):
     #reload settings window
     def reload(self):
         #relead the settings window by removing and adding new one
+        self.current_page=''
         self.settings_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
         self.settings_page_scroll.set_child(self.settings_box)
         self.main_box.remove(self.main_box.get_last_child())

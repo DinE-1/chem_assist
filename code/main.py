@@ -133,11 +133,14 @@ class Application(Gtk.Application):
     
     #load saved preference from file
     def load_preference(self):
+        #exit if style preference file not found
+        if os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(__file__)),self.preference_file_name)) == False:
+            return
         #open and read the preferences file
         try:
             preference_file=open(os.path.join(os.path.dirname(os.path.dirname(__file__)),self.preference_file_name),'r')
         except Exception as err:
-            print("Error opening preferences file",err)
+            print("Error opening preferences file while loading preferences ",err)
             return False
         preferences=preference_file.read()
         preference_file.close()
@@ -152,15 +155,35 @@ class Application(Gtk.Application):
             #ignore lines starting with #
             if preference[0] == "#":
                 continue
-            
-            #seperate the preference and value into a list
+
+            #seperate the preference and value into a list seperated by '='
             preference=preference.split('=')
+
+            #remove the leading and trailing whitespace characters from the preference name
+            cnt=0
+            range=[]
+            for letter in preference[0]:
+                if letter not in ' \n\t':
+                    range.append(cnt)
+                cnt+=1
+            if len(range) != 0:
+                #selects only the range with characters
+                preference[0]=preference[0][range[0]:range[-1]+1]
+            else:
+                preference[0]=''
+
+            #do not process furthur is the preference name is empty
+            if preference[0] == '':
+                continue
+
+            #if no second element, create an empty string as second element
+            if preference[1]==None:
+                preference[1]=''
 
             #remove the quotes by removing the first and last character of the string
             preference[1]=preference[1][1:-1]
 
-            if preference[1]==None:
-                preference[1]=''
+            #add the preferences to a dictionary class
             preference_dict[preference[0]]=preference[1]
 
         return preference_dict
@@ -252,6 +275,13 @@ class Application(Gtk.Application):
     def reload_styles(self):
         for category,css_provider in self.current_css_providers.items():
             #if no style preference then remove from context
+            if os.path.isfile(self.style_preference[category]) == False:
+                if category=='custom_css':
+                    if os.path.isfile(self.css_files_paths[category]) == False:
+                        continue
+                if self.style_preference[category] != '':
+                    print(f'{self.style_preference[category]} file not found')
+            #if category is set to empty string, then remove the css provider from context
             if self.style_preference[category] == '':
                 Gtk.StyleContext.remove_provider_for_display(self.default_display,self.current_css_providers[category])
                 continue
@@ -260,6 +290,21 @@ class Application(Gtk.Application):
             #add css provider to context
             Gtk.StyleContext.add_provider_for_display(self.default_display,css_provider,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
     def css_reload_and_change_action_state(self,caller_action,state):
+        #change the settings page appearance buttons state if the currently open page is appearance settings 
+        action_name=caller_action.props.name
+        state_name=state.get_string()
+        if self.window_history[-1] == pages.settings_page:
+            if self.props.active_window.current_page=='appearance_settings':
+                if action_name=='shapes':
+                    if state_name=='':
+                        self.props.active_window.styles_css_checkbox.props.active=True
+                    elif state_name == self.css_files_paths['round_css']:
+                        self.props.active_window.styles_css_checkbox.props.active=False
+                elif action_name=='colors':
+                    if state_name=='':
+                        self.props.active_window.white_mode_css_checkbox.props.active=True
+                    elif state_name==self.css_files_paths['colorful_css'] or state_name==self.css_files_paths['black_shade_css']:
+                        self.props.active_window.white_mode_css_checkbox.props.active=False
         #set the action state
         caller_action.set_state(state)
         #change the preference
