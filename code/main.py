@@ -456,25 +456,33 @@ class Application(Gtk.Application):
         mode="element"
         tmp_mode=''
         prev_mode=''
-        element=""
-        key=""
-        value=""
+        element=''
+        elements=[]
+        key=''
+        value=''
         for a in css_file_contents:
+            #pretend to add semicolon if no semicolon at the end of key:value
+            if mode=='value' and a=='\n':
+                a=';'
             #ignore whitespace character
             if a in [" ","\t","\n"]:
                 continue
             #ignore comments starting with /* and anding with */
-            if a=='/':
-                tmp_mode='suspect_comment'
             if tmp_mode=='suspect_comment' and a=='*':
                 prev_mode=mode
                 mode='comment'
                 tmp_mode=''
             if mode=='comment' and a=='*':
-                tmp_mode='suspect_end_comment'
+                tmp_mode='suspect_comment_end'
+                continue
             if mode=='comment' and tmp_mode == 'suspect_comment_end' and a=='/':
                 tmp_mode=''
                 mode=prev_mode
+                prev_mode=''
+            if a=='/':
+                tmp_mode='suspect_comment'
+                continue
+
             #ignore lines starting with @ (used in import statements)
             if a=="@" and mode!='comment':
                 mode="ignore"
@@ -484,27 +492,42 @@ class Application(Gtk.Application):
             #do not process if mode is set to 'ignore'
             if mode=='ignore' or mode=='comment':
                 continue
+
             #make the dictionary
             if a not in ["{","}",";",":"]:
                 if mode=="element":
+                    if a==',':
+                        elements.append(element)
+                        element=''
+                        continue
                     element=element+a
                 elif mode=="key":
                     key=key+a
                 elif mode=="value":
                     value=value+a
             if a=="{":
-                css_dict[element]={}
+                elements.append(element)
+                for element in elements:
+                    try:
+                        styles=css_dict[element]
+                    except KeyError:
+                        css_dict[element]={}
                 mode="key"
             if a==":":
                 mode="value"
             if a==";":
-                css_dict[element][key]=value
+                for element in elements:
+                    css_dict[element][key]=value
                 key,value="",""
                 mode="key"
-            if a=="}":
+            if a=="}":                    
+                elements=[]
                 element=""
                 mode="element"
         return css_dict
 #Create an instance of Application class
+file=open(Application.style_preference['colors'],'r').read()
+for key,val in Application.read_css(None,file).items():
+    print(key,val)
 app=Application()
 app.run(None)
