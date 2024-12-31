@@ -342,7 +342,7 @@ class settings_page(Gtk.ApplicationWindow):
         #set the buffer text in pixel unit
         self.font_size_text_box.get_buffer().set_text(current_font_size,-1)
         #update the font size into a custom css file in pixel units
-        self.update_style_to_custom_css_file({'label':{'font-size':current_font_size}})
+        self.update_style_to_custom_css_file({'label,text':{'font-size':current_font_size}})
         
         #reload the styles of the running application
         self.props.application.reload_styles()
