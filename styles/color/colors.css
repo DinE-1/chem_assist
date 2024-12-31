@@ -35,7 +35,7 @@ button.icon_button{
 button.icon_button:hover{
     background-color:rgba(0, 255, 217, 0.244);
 }
-label{
+label, text, value{
     color:rgb(244, 209, 209);
 }
 entry{

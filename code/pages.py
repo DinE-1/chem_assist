@@ -206,6 +206,22 @@ class settings_page(Gtk.ApplicationWindow):
         colors_mode_button.set_group(default_colors_button)
         colors_buttons_box.append(colors_mode_button)
         
+        #transparancy slider
+        transparancy_slider_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
+        self.settings_box.append(transparancy_slider_box)
+
+        transparancy_label=Gtk.Label.new('window transparancy:')
+        transparancy_label.set_halign(Gtk.Align.START)
+        transparancy_slider_box.append(transparancy_label)
+
+        #slider
+        transparancy_slider=Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,0,1,0.01)
+        transparancy_slider.set_value(1)
+        transparancy_slider.set_draw_value(True)
+        transparancy_slider.set_hexpand(True)
+        transparancy_slider.connect('value_changed',self.update_window_transparancy)
+        transparancy_slider_box.append(transparancy_slider)
+
         #add seperator
         seperator2=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
         self.settings_box.append(seperator2)
@@ -249,21 +265,22 @@ class settings_page(Gtk.ApplicationWindow):
         custom_css_yes_button.set_action_name('app.custom_css')
         custom_css_yes_button.set_action_target_value(GLib.Variant.new_string(self.props.application.css_files_paths['custom_css']))
         custom_css_buttons_box.append(custom_css_yes_button)
-        #font size increase or descrease
+        
+        #font size increase or decrease
         font_size_settings_label=Gtk.Label.new("font size")
         font_size_settings_label.set_halign(Gtk.Align.START)
         self.settings_box.append(font_size_settings_label)
         font_size_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
         self.settings_box.append(font_size_box)
-
-        font_size_storage=Gtk.EntryBuffer.new(self.get_font_size(),-1)
+        #font size text box
+        font_size_storage=Gtk.EntryBuffer.new(self.get_style_from_css_files('label','font-size'),-1)
         self.font_size_text_box=Gtk.Entry.new_with_buffer(font_size_storage)
         font_size_box.append(self.font_size_text_box)
-
+        #increase font size
         increase_button=Gtk.Button.new_with_label('+')
         increase_button.connect('clicked',self.change_font_size,'increase')
         font_size_box.append(increase_button)
-
+        #decrease font size
         decrease_button=Gtk.Button.new_with_label('-')
         decrease_button.connect('clicked',self.change_font_size,'decrease')
         font_size_box.append(decrease_button)
@@ -293,18 +310,22 @@ class settings_page(Gtk.ApplicationWindow):
         self.styles_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["round_css"],"shapes"))
         self.white_mode_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["colorful_css"],"colors"))
 
+    def update_window_transparancy(self,slider):
+        transparancy=slider.get_value()
+        self.update_style_to_custom_css_file({'window':{'opacity':str(transparancy)}})
+        self.props.application.reload_styles()
     def change_font_size(self,caller_obj,mode,increase_by_num=1):
         #get current font size
         current_font_size=self.font_size_text_box.get_buffer().get_text()
         if current_font_size[-2:] != 'px':
             print('please enter font size in pixel(px) unit')
-            current_font_size=self.get_font_size()
+            current_font_size=self.get_style_from_css_files('label','font-size')
         #convert from pixel(px) unit string to integer
         try:
             current_font_size=int(current_font_size[:-2])
         except Exception as e:
             print('Enter valid font size',e)
-            current_font_size=self.get_font_size()
+            current_font_size=self.get_style_from_css_files('label','font-size')
 
         #increase/decrease the font size
         if mode == "increase":
@@ -316,43 +337,76 @@ class settings_page(Gtk.ApplicationWindow):
         else:
             print('>unknown mode in increase/decrease font size')
 
+        #create the font size css string in pixel(px) unit
+        current_font_size=str(current_font_size)+'px'
+        
         #set the buffer text in pixel unit
-        self.font_size_text_box.get_buffer().set_text(str(current_font_size)+'px',-1)
-        #update the font size into a custom css file
-        self.update_font_size_to_custom_css_file(current_font_size)
+        self.font_size_text_box.get_buffer().set_text(current_font_size,-1)
+        #update the font size into a custom css file in pixel units
+        self.update_style_to_custom_css_file({'label':{'font-size':current_font_size}})
+        
+        #reload the styles of the running application
         self.props.application.reload_styles()
     #update font size into a custom css file
-    def update_font_size_to_custom_css_file(self,font_size):
+    def update_style_to_custom_css_file(self,css_dict):
+        try:
+            css_file=open(self.props.application.css_files_paths['custom_css'],'r')
+            css_file_contents=css_file.read()
+            existing_css_dict=self.props.application.read_css(css_file_contents)
+            css_file.close()
+        except Exception as a:
+            print("Error"+a)
+            return
+        existing_css_dict.update(css_dict)
+        #construct the content to write in the css file
+        css_label_string=''
+        for style_category,styles in existing_css_dict.items():
+            #the category{
+            css_label_string=f"{css_label_string}\n{style_category}{{"
+            for style_name,style_value in styles.items():
+                #the css style:value;
+                css_label_string=f"{css_label_string}\n\t{str(style_name)}:{str(style_value)};"
+            #the }
+            css_label_string=f"{css_label_string}\n}}"
+        #remove the newline character in empty first line
+        css_label_string=css_label_string[1:]
+
         #open the custom css file to write the new font size
         try:
             css_file=open(self.props.application.css_files_paths['custom_css'],'w')
+            #write the css label string constructed above to the custom css file
+            css_file.write(css_label_string)
+            css_file.close()
         except Exception as a:
-            print(a)
+            print("Error"+a)
             return
 
-        css_label_string=f'label{{\n\tfont-size:{font_size}px;\n}}\ntext{{\n\tfont-size:{font_size}px;\n}}'
-        #write the font size in pixel units
-        try:
-            css_file.write(css_label_string)
-        except Execption as a:
-            print(a)
-            return
     #get the font size somehow
-    def get_font_size(self):
+    def get_style_from_css_files(self,category,style):
         #read css files to get font size
+        #custom css file read
         custom_css_file_path=self.props.application.style_preference['custom_css']
         if os.path.isfile(custom_css_file_path):
             custom_css_file_contents=read_file(custom_css_file_path)
             css_dict=self.props.application.read_css(custom_css_file_contents)
-            if css_dict['label'] != None:
-                if css_dict['label']['font-size']!=None:
-                    return css_dict['label']['font-size']
+            try:
+                style=css_dict[category][style]
+                print(f'{category}->{style} found in custom css file')
+                return style
+            except KeyError as e:
+                print(f'{category}->{style} in custom css file not found')
+        #rounded_edges css file read
         css_file_path=self.props.application.css_files_paths['round_css']
         css_file_contents=read_file(css_file_path)
         css_dict=self.props.application.read_css(css_file_contents)
-        if css_dict['label'] != None:
-            if css_dict['label']['font-size'] != None:
-                return css_dict['label']['font-size']
+        try:
+            style=css_dict[category][style]
+            print(f'{category}->{style} found in rounded_edges file')
+            return style
+        except KeyError as e:
+            print(f'{category}->{style} not found in rounded_edges css file')
+
+        print(f'style {style} from {category} not found while searching custom and rounded_edges css files')
         return ''
     #database settings
     def db_settings_display(self,caller_obj):

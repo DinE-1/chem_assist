@@ -26,7 +26,7 @@ button:hover{
 button.start_quiz_button:hover{
     background:rgb(76, 87, 186);
 }
-label{
+label,value{
     color:rgb(218, 217, 217);
 }
 entry{
