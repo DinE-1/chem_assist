@@ -526,8 +526,5 @@ class Application(Gtk.Application):
                 mode="element"
         return css_dict
 #Create an instance of Application class
-file=open(Application.style_preference['colors'],'r').read()
-for key,val in Application.read_css(None,file).items():
-    print(key,val)
 app=Application()
 app.run(None)
