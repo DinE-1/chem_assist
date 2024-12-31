@@ -395,7 +395,7 @@ class settings_page(Gtk.ApplicationWindow):
             try:
                 style_value=css_dict[category][style]
                 print(f'{category}->{style}:{style_value} found in custom css file')
-                return style
+                return style_value
             except KeyError as e:
                 print(f'{category}->{style} in custom css file not found')
             except Exception as e:
@@ -407,7 +407,7 @@ class settings_page(Gtk.ApplicationWindow):
         try:
             style_value=css_dict[category][style]
             print(f'{category}->{style_value}:{style} found in rounded_edges file')
-            return style
+            return style_value
         except KeyError as e:
             print(f'{category}->{style} not found in rounded_edges css file')
         except Exception as e:
@@ -614,6 +614,7 @@ class main_menu_page(Gtk.ApplicationWindow):
         #message box
         message_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
         message_box_scroller=Gtk.ScrolledWindow()
+        message_box_scroller.set_propagate_natural_height(True)
         message_box_scroller.set_child(message_box)
         #main menu buttons box
         main_menu_buttons_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
