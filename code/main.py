@@ -256,7 +256,7 @@ class Application(Gtk.Application):
             del app.window_history[0]
 
         page=page(application=app)
-        page.set_default_size(app.monitor_width/2,int(app.monitor_height/1.5))
+        page.set_default_size(app.monitor_width/2,int(app.monitor_height/1.8))
 
         if len(app.window_history)>1:
             page.set_default_size(app.width,app.height)
