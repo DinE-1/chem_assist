@@ -36,3 +36,6 @@ entry{
 check{
     background: rgb(58, 52, 52);
 }
+highlight{
+    background:rgba(26, 255, 0, 0.834);
+}

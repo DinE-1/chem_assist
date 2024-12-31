@@ -206,20 +206,20 @@ class settings_page(Gtk.ApplicationWindow):
         colors_mode_button.set_group(default_colors_button)
         colors_buttons_box.append(colors_mode_button)
         
-        #transparancy slider
-        transparancy_label=Gtk.Label.new('window transparancy:')
-        transparancy_label.set_halign(Gtk.Align.START)
-        self.settings_box.append(transparancy_label)
+        #opacity slider
+        opacity_label=Gtk.Label.new('window opacity:')
+        opacity_label.set_halign(Gtk.Align.START)
+        self.settings_box.append(opacity_label)
 
-        transparancy_slider_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
-        self.settings_box.append(transparancy_slider_box)
+        opacity_slider_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
+        self.settings_box.append(opacity_slider_box)
         #slider
-        transparancy_slider=Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,0.2,1,0.01)
-        transparancy_slider.set_value(float(self.get_style_from_css_files('window','opacity')))
-        transparancy_slider.set_draw_value(True)
-        transparancy_slider.set_hexpand(True)
-        transparancy_slider.connect('value_changed',self.update_window_transparancy)
-        transparancy_slider_box.append(transparancy_slider)
+        opacity_slider=Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,0.2,1,0.01)
+        opacity_slider.set_value(float(self.get_style_from_css_files('window','opacity')))
+        opacity_slider.set_draw_value(True)
+        opacity_slider.set_hexpand(True)
+        opacity_slider.connect('value_changed',self.update_window_opacity)
+        opacity_slider_box.append(opacity_slider)
 
         #add seperator
         seperator2=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
@@ -309,9 +309,9 @@ class settings_page(Gtk.ApplicationWindow):
         self.styles_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["round_css"],"shapes"))
         self.white_mode_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["colorful_css"],"colors"))
 
-    def update_window_transparancy(self,slider):
-        transparancy=slider.get_value()
-        self.update_style_to_custom_css_file({'window':{'opacity':str(transparancy)}})
+    def update_window_opacity(self,slider):
+        opacity=slider.get_value()
+        self.update_style_to_custom_css_file({'window':{'opacity':str(opacity)}})
         self.props.application.reload_styles()
     def change_font_size(self,caller_obj,mode,increase_by_num=1):
         #get current font size
@@ -348,16 +348,18 @@ class settings_page(Gtk.ApplicationWindow):
         self.props.application.reload_styles()
     #update font size into a custom css file
     def update_style_to_custom_css_file(self,css_dict):
+        css_file_contents=''
         try:
             css_file=open(self.props.application.css_files_paths['custom_css'],'r')
             css_file_contents=css_file.read()
-            existing_css_dict=self.props.application.read_css(css_file_contents)
             css_file.close()
-        except FileNotFoundError as err:
+        except FileNotFoundError:
             print('creating custom css file')
         except Exception as a:
             print("Error"+str(a))
             return
+
+        existing_css_dict=self.props.application.read_css(css_file_contents)
         existing_css_dict.update(css_dict)
         #construct the content to write in the css file
         css_label_string=''
