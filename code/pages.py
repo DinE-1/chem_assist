@@ -207,16 +207,15 @@ class settings_page(Gtk.ApplicationWindow):
         colors_buttons_box.append(colors_mode_button)
         
         #transparancy slider
-        transparancy_slider_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
-        self.settings_box.append(transparancy_slider_box)
-
         transparancy_label=Gtk.Label.new('window transparancy:')
         transparancy_label.set_halign(Gtk.Align.START)
-        transparancy_slider_box.append(transparancy_label)
+        self.settings_box.append(transparancy_label)
 
+        transparancy_slider_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
+        self.settings_box.append(transparancy_slider_box)
         #slider
-        transparancy_slider=Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,0,1,0.01)
-        transparancy_slider.set_value(1)
+        transparancy_slider=Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,0.2,1,0.01)
+        transparancy_slider.set_value(float(self.get_style_from_css_files('window','opacity')))
         transparancy_slider.set_draw_value(True)
         transparancy_slider.set_hexpand(True)
         transparancy_slider.connect('value_changed',self.update_window_transparancy)
