@@ -58,3 +58,6 @@ listview{
 scrollbar{
     color:yellow;
 }
+separator{
+    background-color:aqua;
+}
