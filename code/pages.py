@@ -1420,7 +1420,7 @@ class simulator_page(Gtk.ApplicationWindow):
             self.display(f'{reactants_string} reaction not found')
             return None
         elif result[1]==reactants_string:          
-            self.display(f'{result_reaction_string} reaction found')
+            self.display(f'{reactants_string} reaction found')
         else:
             self.display("???unknown case")
             return False
