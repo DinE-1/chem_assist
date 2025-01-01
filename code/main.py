@@ -17,7 +17,7 @@ css_files_paths={}
 preferences_default={
     #database
     'database_name':'chem_assist_db1',
-    'reactions_column_string_max_length':255, #maximum about of letters to be the records of the reactions table in database
+    'reactions_column_string_max_length':'255', #maximum about of letters to be the records of the reactions table in database
     #style sheets to apply paths
     'styles':style_preference,
     'css_files_paths':css_files_paths,
@@ -413,7 +413,7 @@ class Application(Gtk.Application):
 
     #create reactions table
     def create_reactions_table(self,db_cursor):
-        col_max_len=self.preferences['reactions_column_string_max_length']
+        col_max_len=int(self.preferences['reactions_column_string_max_length'])
         try:
             create_reactions_table_sql_command=f'''CREATE TABLE reactions(
                 name varchar({col_max_len}) primary key,
