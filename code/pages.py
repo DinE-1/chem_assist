@@ -693,9 +693,11 @@ class users_settings_page_box(Gtk.Box):
 
         #message label with scroll support
         message_label_scroll=Gtk.ScrolledWindow.new()
-        self.message_label=Gtk.Label.new()
-        message_label_scroll.set_child(self.message_label)
         self.append(message_label_scroll)
+        #label
+        self.message_label=Gtk.Label.new()
+        self.message_label.set_halign(Gtk.Align.START)
+        message_label_scroll.set_child(self.message_label)
         self.application.props.active_window.message_label=self.message_label
 
         users_buttons_scroller.set_propagate_natural_height(True)
