@@ -1358,13 +1358,15 @@ class simulator_page(Gtk.ApplicationWindow):
         add_reactants_button.set_halign(Gtk.Align.CENTER)
         add_reactants_button.connect('clicked',self.add_reactant_entry)
         main_box.append(add_reactants_button)
+        #result message
+        self.result_message=Gtk.Label.new()
+        main_box.append(self.result_message)
         #search button
         search_button=Gtk.Button.new_with_label("search")
         search_button.set_halign(Gtk.Align.CENTER)
         search_button.set_valign(Gtk.Align.END)
         search_button.set_vexpand(True)
         search_button.connect('clicked',self.display_products)
-
         main_box.append(search_button)
 
         #message box
@@ -1413,13 +1415,12 @@ class simulator_page(Gtk.ApplicationWindow):
         search_command=f"select * from reactions where reactants='{reactants_string}'"
         self.props.application.db_cursor.execute(search_command)
         result=self.props.application.db_cursor.fetchone()
-        
+
         if result == None:
             self.display(f'{reactants_string} reaction not found')
             return None
-        result_reaction_string=result[1]
-        if result_reaction_string == reactants_string:
-            self.display("reaction found")
+        elif result[1]==reactants_string:          
+            self.display(f'{result_reaction_string} reaction found')
         else:
             self.display("???unknown case")
             return False
@@ -1433,11 +1434,10 @@ class simulator_page(Gtk.ApplicationWindow):
         if result==None or result==False:
             return
 
-        products_string=result[3]
-        products_label=Gtk.Label.new(products_string)
-
-        self.get_child().insert_child_after(products_label,self.get_child().get_first_child().get_next_sibling())
-
+        self.result_message.set_text(f'reaction:\n{result[1]}--->{result[2]}')
+        if result[3]!='':
+            self.result_message.set_text(self.result_message.get_text()+f'\nextra_information:\n{result[3]}')
+    
     #look for reactions table in database
     def search_for_reactions_table(self):
         #search for database
