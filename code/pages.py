@@ -120,7 +120,9 @@ class settings_page(Gtk.ApplicationWindow):
 
         #welcome message
         wlcm_msg=Gtk.Label.new('Welcome to settings page!')
-        self.settings_box.set_child(wlcm_msg)
+        wlcm_msg.set_hexpand(True)
+        wlcm_msg.set_vexpand(True)
+        self.settings_box.append(wlcm_msg)
 
         #side panel buttons
         #general
