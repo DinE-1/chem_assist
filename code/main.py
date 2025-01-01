@@ -1,26 +1,66 @@
-import gi,os,sys,mysql.connector
+import gi,os,sys,mysql.connector,copy
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk,Gdk,Gio,GLib
 from mysql.connector import errorcode
 import pages
 import quiz
 
+current_file_path=__file__
+current_file_dir_parent=os.path.split(os.path.split(current_file_path)[0])[0] #get the parent directory of this file's directory
+#detect file paths even when running in a compiled environment
+if getattr(sys,'frozen',False):
+    current_file_dir_parent=sys._MEIPASS
+
+style_preference={'colors':'','shapes':'','images':'','custom_css':''}
+css_files_paths={}
+#preferences
+preferences_default={
+    #database
+    'database_name':'chem_assist_db1',
+    'reactions_column_string_max_length':255, #maximum about of letters to be the records of the reactions table in database
+    #style sheets to apply paths
+    'styles':style_preference,
+    'css_files_paths':css_files_paths,
+    #css directory
+    'css_dir':os.path.join(current_file_dir_parent,'styles'),
+    #user customised css file name
+    'user_custom_css_file_name':'custom.css',
+    #max number of windows to store in window history list
+    'window_history_limit':10
+}
+
+#paths of css files
+preferences_default['css_files_paths']={
+    "round_css":os.path.join(preferences_default['css_dir'],'shape','rounded_edges.css'),
+    'colorful_css':os.path.join(preferences_default['css_dir'],"color","colors.css"),
+    'black_shade_css':os.path.join(preferences_default['css_dir'],'color','black_shade.css'),
+    'images_css':os.path.join(preferences_default['css_dir'],"images.css"),
+    'app_css':os.path.join(preferences_default['css_dir'],'app.css'),
+    'custom_css':os.path.join(preferences_default['css_dir'],preferences_default['user_custom_css_file_name'])
+}
+#set the style preference dictionary with some default preferences
+preferences_default['styles']={
+    "shapes":preferences_default['css_files_paths']["round_css"],
+    "colors":preferences_default['css_files_paths']['colorful_css'],
+    "images":preferences_default['css_files_paths']['images_css'],
+    'app':preferences_default['css_files_paths']['app_css'],
+    'custom_css':preferences_default['css_files_paths']['custom_css']
+}
+
 #custom gtk application class containing helpful definitions
 class Application(Gtk.Application):
     #window history
-    window_history_limit=10
     window_history=[]
 
+    #settings
+    preferences=copy.deepcopy(preferences_default)
     #user preferences file name
     preference_file_name="user_preferences_chem_assist.conf"
 
-    #user customised css file name
-    user_custom_css_file_name='custom.css'
     #database
-    db_name="chem_assist_db1"
+    db_name=preferences['database_name']
     db_cursor=None
     database_object=None
-    reactions_column_string_max_length=255
 
     #users
     users={'':'',"chem_assist_user":"chem_assist_user_password"}
@@ -28,42 +68,25 @@ class Application(Gtk.Application):
     #columns for reactions table in database
     reactions_table_columns=("name","reactants","products","extra_info")
 
-    current_file_path=__file__
-    current_file_dir_parent=os.path.split(os.path.split(current_file_path)[0])[0] #get the parent directory of this file's directory
-    #detect file paths even when running in a compiled environment
-    if getattr(sys,'frozen',False):
-        current_file_dir_parent=sys._MEIPASS
-    #folder for styles,pictures
-    css_dir=os.path.join(current_file_dir_parent,'styles')
-    pics_dir=os.path.join(current_file_dir_parent,"pictures")
-
+    ##appearance
     #default display
     default_display=Gdk.Display.get_default()
-    #appearance(css)
-    css_files_paths={
-        "round_css":os.path.join(css_dir,'shape','rounded_edges.css'),
-        'colorful_css':os.path.join(css_dir,"color","colors.css"),
-        'black_shade_css':os.path.join(css_dir,'color','black_shade.css'),
-        'images_css':os.path.join(css_dir,"images.css"),
-        'custom_css':os.path.join(css_dir,user_custom_css_file_name)
-    }
-    style_preference={
-        "shapes":css_files_paths["round_css"],
-        "colors":css_files_paths['colorful_css'],
-        "images":css_files_paths['images_css'],
-        'custom_css':css_files_paths['custom_css']
-    }    #set the style preference dictionary with some default preferences
-    style_preference_default={
-        "shapes":css_files_paths["round_css"],
-        "colors":css_files_paths['colorful_css'],
-        "images":css_files_paths['images_css'],
-        'custom_css':css_files_paths['custom_css']
-    }
+    #css file paths
+    css_files_paths=preferences_default['css_files_paths']
+    style_preference=preferences['styles']
+    #css processors
     other_styles_css_provider=Gtk.CssProvider.new()
     colors_css_provider=Gtk.CssProvider.new()
     images_css_provider=Gtk.CssProvider.new()
+    app_css_provider=Gtk.CssProvider.new()
     custom_css_provider=Gtk.CssProvider.new()
-    current_css_providers={"shapes":other_styles_css_provider,"colors":colors_css_provider,"images":images_css_provider,"custom_css":custom_css_provider}
+    current_css_providers={
+        "shapes":other_styles_css_provider,
+        "colors":colors_css_provider,
+        "images":images_css_provider,
+        'app':app_css_provider,
+        "custom_css":custom_css_provider
+    }
 
     #this function's code executed automatically
     def __init__(self):
@@ -75,8 +98,8 @@ class Application(Gtk.Application):
         print("activated")
 
         #load preferences from the preferences file
-        preference_dict=self.load_preference()
-        self.update_settings(preference_dict)
+        self.load_preference()
+        self.update_vars()
 
         #get monitor dimentions
         self.primary_monitor=self.default_display.get_monitors()[0]
@@ -94,18 +117,19 @@ class Application(Gtk.Application):
         self.add_action(self.current_user_action)
 
         #appearance actions
+        #colors
         app_colors_action=Gio.SimpleAction.new_stateful('colors',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference["colors"]))
         self.add_action(app_colors_action)
         app_colors_action.connect('activate',self.css_reload_and_change_action_state)
-
+        #shapes
         shapes_action=Gio.SimpleAction.new_stateful('shapes',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference['shapes']))
         self.add_action(shapes_action)
         shapes_action.connect('activate',self.css_reload_and_change_action_state)
-
+        #images
         button_images_action = Gio.SimpleAction.new_stateful('images',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference['images']))
         self.add_action(button_images_action)
         button_images_action.connect('activate',self.css_reload_and_change_action_state)
-
+        #custom css
         custom_css_action=Gio.SimpleAction.new_stateful('custom_css',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference['custom_css']))
         self.add_action(custom_css_action)
         custom_css_action.connect('activate',self.css_reload_and_change_action_state)
@@ -146,60 +170,38 @@ class Application(Gtk.Application):
         preference_file.close()
 
         #do no process further is no preferences are detected
-        if len(preferences) == 0 or preferences=="":
+        if len(preferences) == 0 or preferences=='':
             return
         preferences=preferences.split('\n')
         #save the preferences in the form of preference=value into a dictionary as preference:value
-        preference_dict={}
-        for preference in preferences:
-            #ignore lines starting with #
-            if preference[0] == "#":
+        for preference_line in preferences:
+            #ignore lines starting with # and ignore empty key line
+            if preference_line == '':
+                continue
+            if preference_line[0] in ["#"]:
                 continue
 
             #seperate the preference and value into a list seperated by '='
-            preference=preference.split('=')
+            preference_line=preference_line.split('=')
 
-            #remove the leading and trailing whitespace characters from the preference name
-            cnt=0
-            range=[]
-            for letter in preference[0]:
-                if letter not in ' \n\t':
-                    range.append(cnt)
-                cnt+=1
-            if len(range) != 0:
-                #selects only the range with characters
-                preference[0]=preference[0][range[0]:range[-1]+1]
-            else:
-                preference[0]=''
-
-            #do not process furthur is the preference name is empty
-            if preference[0] == '':
-                continue
-
-            #if no second element, create an empty string as second element
-            if preference[1]==None:
-                preference[1]=''
+            preference_line[0]=preference_line[0].split('~')
 
             #remove the quotes by removing the first and last character of the string
-            preference[1]=preference[1][1:-1]
+            preference_line[1]=preference_line[1][1:-1]
 
-            #add the preferences to a dictionary class
-            preference_dict[preference[0]]=preference[1]
+            if preference_line[0][0]=='':
+                self.preferences[preference_line[0][-1]]=preference_line[1]
+                continue
 
-        return preference_dict
-    #update the existing settings from a dictionary class
-    def update_settings(self,update_dict):
-        if update_dict==None:
-            return
-        #css
-        for style_name in self.style_preference.keys():
-            try:
-                update_dict[style_name]
-                self.style_preference[style_name] = update_dict[style_name]
-            except KeyError as err:
-                print(f'default setting for {style_name}')
-            except Exception as e:
-                print(e)
+            #give value to dict inside dict
+            n=len(preference_line[0])
+            self.preferences[preference_line[0][-n]][preference_line[0][-n+1]]=preference_line[1]
+
+    #update the variables from preferences dictionary
+    def update_vars(self):
+        self.db_name=self.preferences['database_name']
+        self.css_files_paths=self.preferences['css_files_paths']
+        self.style_preference=self.preferences['styles']
     #pages open
     #reactions page open
     def on_open_reactions_page(self,caller_action,param):
@@ -252,7 +254,7 @@ class Application(Gtk.Application):
         if app.window_history_size > 1 and app.window_history[-1] == app.window_history[-2]:
             app.window_history.pop()
         #trim window history if greater than limit
-        if app.window_history_size>app.window_history_limit:
+        if app.window_history_size>int(app.preferences['window_history_limit']):
             del app.window_history[0]
 
         page=page(application=app)
@@ -281,15 +283,27 @@ class Application(Gtk.Application):
                         continue
                 if self.style_preference[category] != '':
                     print(f'{self.style_preference[category]} file not found')
+
             #if category is set to empty string, then remove the css provider from context
             if self.style_preference[category] == '':
                 Gtk.StyleContext.remove_provider_for_display(self.default_display,self.current_css_providers[category])
                 continue
             #load the css files to css provider
-            self.current_css_providers[category].load_from_path(self.style_preference[category])
+            css_provider.load_from_path(self.style_preference[category])
             #add css provider to context
             Gtk.StyleContext.add_provider_for_display(self.default_display,css_provider,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+    #GioSimpleactionAction function
     def css_reload_and_change_action_state(self,caller_action,state):
+        #appearance page checkbuttons state update
+        self.update_checkbuttons_state(caller_action,state)
+        #set the action state
+        caller_action.set_state(state)
+        #change the preference
+        self.style_preference[caller_action.props.name]=state.get_string()
+        #reload styles to apply the new style preference
+        self.reload_styles()
+    #update the state of settings page=>appearance settings=>general appearance settings checkbutton as the action's state updates
+    def update_checkbuttons_state(self,caller_action,state):
         #change the settings page appearance buttons state if the currently open page is appearance settings 
         action_name=caller_action.props.name
         state_name=state.get_string()
@@ -297,21 +311,14 @@ class Application(Gtk.Application):
             if self.props.active_window.current_page=='appearance_settings':
                 if action_name=='shapes':
                     if state_name=='':
-                        self.props.active_window.styles_css_checkbox.props.active=True
+                        self.props.active_window.settings_page_scroll.get_child().get_child().styles_css_checkbox.props.active=True
                     elif state_name == self.css_files_paths['round_css']:
-                        self.props.active_window.styles_css_checkbox.props.active=False
+                        self.props.active_window.settings_page_scroll.get_child().get_child().styles_css_checkbox.props.active=False
                 elif action_name=='colors':
                     if state_name=='':
-                        self.props.active_window.white_mode_css_checkbox.props.active=True
+                        self.props.active_window.settings_page_scroll.get_child().get_child().white_mode_css_checkbox.props.active=True
                     elif state_name==self.css_files_paths['colorful_css'] or state_name==self.css_files_paths['black_shade_css']:
-                        self.props.active_window.white_mode_css_checkbox.props.active=False
-        #set the action state
-        caller_action.set_state(state)
-        #change the preference
-        self.style_preference[caller_action.props.name]=state.get_string()
-        #reload styles to apply the new style preference
-        self.reload_styles()
-
+                        self.props.active_window.settings_page_scroll.get_child().get_child().white_mode_css_checkbox.props.active=False
     ##database
     #database connect and use
     def connect_to_db_server_and_create_db(self):
@@ -371,7 +378,6 @@ class Application(Gtk.Application):
 
     #connect to database server
     def connect_to_db_server(self):
-
         #close any existing connection
         if self.database_object != None and self.database_object.is_connected():
             self.database_object.close()
@@ -407,7 +413,7 @@ class Application(Gtk.Application):
 
     #create reactions table
     def create_reactions_table(self,db_cursor):
-        col_max_len=self.reactions_column_string_max_length
+        col_max_len=self.preferences['reactions_column_string_max_length']
         try:
             create_reactions_table_sql_command=f'''CREATE TABLE reactions(
                 name varchar({col_max_len}) primary key,
@@ -424,33 +430,51 @@ class Application(Gtk.Application):
                 return err
         print("=>created table 'reactions'")
         return True
-    #save preferences while closing application
+    #save preferences into a file while closing application
     def on_close(self,caller_object):
-        #save the changed style preferences into a file
-        preference_string=""
-        for style,value in self.style_preference.items():
-            if value != self.style_preference_default[style]:
-                preference_string=preference_string+ '\n' + style + "='" + value + "'"
-        preference_string=preference_string[1:]
+        self.preferences['db_name']=self.db_name
+        #put the differences from default preferences into a dictionary
+        difference_dict=self.dict_compare(preferences_default,self.preferences)
+        #generate a string to write into the preferences file
+        preference_string=self.gen_preference_string_from_dict(difference_dict)
         #write preferences to file
         self.write_string_to_file(preference_string)
     
+    #generate the changed preferences as string to write into the preferences file
+    def gen_preference_string_from_dict(self,dictionary,parent=''):
+        preference_string=''
+        for name,value in dictionary.items():
+            if type(value)==type({}):
+                preference_string=preference_string+self.gen_preference_string_from_dict(value,parent=name)
+                continue
+            preference_string=preference_string + parent + '~' + str(name) + "='" + str(value) + "'\n"
+        return preference_string
+
+    #compare 2 dictionaries and output another dictionary containing the changed values of dict_default
+    def dict_compare(self,dict_default,dict_changed):
+        difference_dict={}
+        for key,value in dict_default.items():
+            if type(value) == type({}):
+                difference_dict[key]=self.dict_compare(value,dict_changed[key])
+                continue
+            if value != dict_changed[key]:
+                difference_dict[key]=dict_changed[key]
+        return difference_dict
+
+    #write a string to the preferences file
     def write_string_to_file(self,string):
         #write a string to the preferences file
         try:
             #open file
             preference_file=open(self.preference_file_name,'w')
+            #write to file
+            preference_file.write(string)
         except Execption as e:
             print(e)
             return False
-        try:
-            #write to file
-            preference_file.write(string)
-        except Exeption as e:
-            print(e)
-            return False
         return True
-    #construct dictionary from css file
+
+    #construct dictionary from css content
     def read_css(self,css_file_contents):
         css_dict={}
         mode="element"
