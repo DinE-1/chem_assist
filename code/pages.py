@@ -84,7 +84,7 @@ class welcome_page(Gtk.ApplicationWindow):
 #settings page
 class settings_page(Gtk.ApplicationWindow):
     message_box=True
-    open_page="general_settings"
+    open_page=""
     current_page=''
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs,title="settings")
@@ -96,10 +96,14 @@ class settings_page(Gtk.ApplicationWindow):
         self.main_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
         self.set_child(self.main_box)
 
+        side_panel_expander=Gtk.Expander.new_with_mnemonic('_e')
+        side_panel_expander.set_expanded(True)
+        self.main_box.append(side_panel_expander)
         #scrolling support for side panel
         side_panel_scroll=Gtk.ScrolledWindow.new()
         side_panel_scroll.set_propagate_natural_width(True) #do not shrink button width when space is available
-        self.main_box.append(side_panel_scroll)
+        side_panel_scroll.set_propagate_natural_height(True)
+        side_panel_expander.set_child(side_panel_scroll)
         #settings page scroll
         self.settings_page_scroll=Gtk.ScrolledWindow.new()
         self.settings_page_scroll.set_propagate_natural_width(True)
@@ -123,6 +127,7 @@ class settings_page(Gtk.ApplicationWindow):
         appearance_settings_button=Gtk.Button.new_with_label("Appearance")
         appearance_settings_button.connect('clicked',self.appearance_display)
         settings_categories_box.append(appearance_settings_button)
+
         #database
         db_settings_button=Gtk.Button.new_with_label("Database")
         db_settings_button.connect('clicked',self.db_settings_display)
@@ -243,12 +248,15 @@ class general_settings_box(Gtk.Box):
             #name label button
             name_label_button=Gtk.Button.new_with_label(f'{str(key)}:')
             name_label_button.add_css_class('transparant_button')
+            name_label_button.props.child.add_css_class('general_settings_button_label')
+            name_label_button.props.child.set_halign(Gtk.Align.START)
             entry_box.append(name_label_button)
 
             #text displaying the value of the settings with scroll support
             entry_label_scroll=Gtk.ScrolledWindow.new()
             entry_label_scroll.set_kinetic_scrolling(False)
             entry_label_scroll.set_propagate_natural_width(True)
+            entry_label_scroll.set_propagate_natural_height(True)
             entry_label_scroll.set_hexpand(True)
             entry_box.append(entry_label_scroll)
             #the label carrying the entry text

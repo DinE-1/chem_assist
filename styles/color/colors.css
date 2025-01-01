@@ -33,7 +33,14 @@ button.icon_button{
     background: rgba(255, 255, 0, 0);
 }
 button.icon_button:hover{
-    background-color:rgba(0, 255, 217, 0.244);
+    background:rgba(0, 255, 217, 0.244);
+}
+button.transparant_button{
+    background:rgb(147, 55, 204);
+}
+button.transparant_button:hover{
+    background-image:linear-gradient( rgb(20, 78, 154),rgb(53, 25, 25));
+    color:black;
 }
 label, text, value{
     color:rgb(244, 209, 209);
