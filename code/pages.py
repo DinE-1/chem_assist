@@ -623,7 +623,7 @@ class database_settings_box(Gtk.Box):
         self.append(connect_to_db_button)
 
         #message text
-        if self.application.db_cursor!=None:
+        if self.application.database_object!=None and self.application.database_object.is_connected():
             connection_status_message="Connection to database available"
         else:
             connection_status_message="Connection to database Unavailable!"
