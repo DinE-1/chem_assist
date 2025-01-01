@@ -32,6 +32,7 @@ label,value{
 entry{
     background:rgb(70, 67, 67);
     color:rgba(110, 214, 179, 0.834);
+    caret-color: white;
 }
 check{
     background: rgb(58, 52, 52);
