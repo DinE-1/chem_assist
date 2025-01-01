@@ -25,8 +25,8 @@ def get_children(parent):
 #add a css class to children of a widget
 def add_css_class_to_children(parent,css_class):
     children=get_children(parent)
-    for i in children:
-        i.add_css_class(css_class)
+    for c in children:
+        c.add_css_class(css_class)
 
 #store reaction data
 class reaction_info(GObject.Object):
@@ -84,56 +84,56 @@ class welcome_page(Gtk.ApplicationWindow):
 #settings page
 class settings_page(Gtk.ApplicationWindow):
     message_box=True
-    open_page=""
+    open_page="general_settings"
     current_page=''
-
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs,title="settings")
         self.current_page=''
-
         header_bar.set_titlebar(header_bar,self,settings=False)
 
         ##layout
+        #main box
         self.main_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
         self.set_child(self.main_box)
 
-        #scrolling support for window
+        #scrolling support for side panel
         side_panel_scroll=Gtk.ScrolledWindow.new()
-        self.settings_page_scroll=Gtk.ScrolledWindow.new()
-
-        #properties
         side_panel_scroll.set_propagate_natural_width(True) #do not shrink button width when space is available
-
+        self.main_box.append(side_panel_scroll)
+        #settings page scroll
+        self.settings_page_scroll=Gtk.ScrolledWindow.new()
         self.settings_page_scroll.set_propagate_natural_width(True)
         self.settings_page_scroll.set_hexpand(True)
-
-        #boxes
-        settings_categories_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,0)
-        self.settings_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
-        #scroll support
-        side_panel_scroll.set_child(settings_categories_box)
-        self.settings_page_scroll.set_child(self.settings_box)
-
-        #add to page
-        self.main_box.append(side_panel_scroll)
         self.main_box.append(self.settings_page_scroll)
 
-        #side panel buttons
-        appearance_settings_button=Gtk.Button.new_with_label("Appearance")
-        db_settings_button=Gtk.Button.new_with_label("Database")
-        users_settings_button=Gtk.Button.new_with_label("Users")
-
-        #button properties
-        settings_categories_box.append(appearance_settings_button)
-        settings_categories_box.append(db_settings_button)
-        settings_categories_box.append(users_settings_button)
-        add_css_class_to_children(settings_categories_box,"settings_categories_box")
-
+        #settings categories box
+        settings_categories_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,0)
+        side_panel_scroll.set_child(settings_categories_box)
+        #settings box
+        self.settings_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
         self.settings_box.set_hexpand(True)
-        #button functions
+        self.settings_page_scroll.set_child(self.settings_box)
+
+        #side panel buttons
+        #general
+        general_settings_button=Gtk.Button.new_with_label('general')
+        general_settings_button.connect('clicked',self.general_settings_display)
+        settings_categories_box.append(general_settings_button)
+        #appearance
+        appearance_settings_button=Gtk.Button.new_with_label("Appearance")
         appearance_settings_button.connect('clicked',self.appearance_display)
-        users_settings_button.connect('clicked',self.users_display)
+        settings_categories_box.append(appearance_settings_button)
+        #database
+        db_settings_button=Gtk.Button.new_with_label("Database")
         db_settings_button.connect('clicked',self.db_settings_display)
+        settings_categories_box.append(db_settings_button)
+        #users
+        users_settings_button=Gtk.Button.new_with_label("Users")
+        users_settings_button.connect('clicked',self.users_display)
+        settings_categories_box.append(users_settings_button)
+
+        #add css to buttons in side panel
+        add_css_class_to_children(settings_categories_box,"settings_categories_box")
 
         ##actions
         #users selection button
@@ -141,7 +141,6 @@ class settings_page(Gtk.ApplicationWindow):
         user_button_activate_action.connect('activate',self.on_activate_users_button)
         user_button_activate_action.connect('change_state',self.on_user_button_action_state_change)
         self.add_action(user_button_activate_action)
-
         #connection to db
         retry_connection_to_db_action=Gio.SimpleAction.new("retry_connection_to_db",None)
         retry_connection_to_db_action.connect('activate',self.retry_connection_to_db)
@@ -149,23 +148,167 @@ class settings_page(Gtk.ApplicationWindow):
 
         #open users page window if open_page variable is set to users_page
         if self.open_page=="users_page":
-            self.users_display(None)
+            self.users_display()
+        if self.open_page=='general_settings':
+            self.general_settings_display()
+    #general settings page
+    def general_settings_display(self,caller_obj=None):
+        self.reload()
+        self.current_page='general_settings'
+        self.props.title='settings/general_settings'
+
+        self.settings_box=general_settings_box(self.props.application)
+        self.settings_page_scroll.set_child(self.settings_box)
 
     #appearance settings page
-    def appearance_display(self,caller_obj):
+    def appearance_display(self,caller_obj=None):
         self.reload()
         self.current_page='appearance_settings'
+        self.props.title="settings/appearance"
+
+        self.settings_box=appearance_settings_box(self.props.application)
+        self.settings_page_scroll.set_child(self.settings_box)
+    
+    #database settings page
+    def db_settings_display(self,caller_obj=None):
+        self.reload()
+        self.current_page='database_settings'
+        self.props.title="settings/database"
+
+        self.settings_box=database_settings_box(self.props.application)
+        self.settings_page_scroll.set_child(self.settings_box)
+
+    #attempt to connect to database
+    def retry_connection_to_db(self,caller_action,param):
+        db_connection_status=self.props.application.connect_to_db_server_and_create_db()
+        if db_connection_status == True:
+            self.settings_box.message_label.set_text("cursor available!")
+
+    #users settings
+    def users_display(self,caller_obj=None):
+        self.reload()
+        self.current_page='users_settings'
+        self.props.title="settings/users"
+
+        self.settings_box=users_settings_page_box(self.props.application)
+        self.settings_page_scroll.set_child(self.settings_box)
+    #when user button is clicked
+    def on_activate_users_button(self,caller_action,parameter):
+        caller_action.set_state(parameter)
+        self.props.application.current_user_action.set_state(caller_action.props.state)
+        self.settings_box.update_current_user_message()
+    #on user button action state change
+    def on_user_button_action_state_change(*args):
+        print("state changed",args)
+    #reload settings window
+    def reload(self):
+        #relead the settings window by removing and adding new one
+        self.current_page=''
+        self.settings_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
+        self.settings_page_scroll.set_child(self.settings_box)
+        self.main_box.remove(self.main_box.get_last_child())
+        self.main_box.append(self.settings_page_scroll)
+#settings page-> general settings
+class general_settings_box(Gtk.Box):
+    def __init__(self,application):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        self.set_spacing(10)
+        self.application=application
+
+        #display the settings from the preferences for the user to edit
+        self.settings_display(self.application.preferences)
+        self.remove(self.get_last_child())
+
+        #message label with scroll support
+        message_label_scroll=Gtk.ScrolledWindow.new()
+        self.message_label=Gtk.Label.new()
+        message_label_scroll.set_child(self.message_label)
+        self.append(message_label_scroll)
+        self.application.props.active_window.message_label=self.message_label
+    def settings_display(self,dic):
+        if dic==self.application.preferences['css_files_paths']:
+            self.append(Gtk.Label.new('css files paths'))
+
+        self.append(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+
+        for key,val in dic.items():
+            if type(val) == type({}):
+                if key=='styles':
+                    continue
+                self.settings_display(val)
+                continue
+            #entry box
+            entry_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,5)
+            self.append(entry_box)
+            #name label button
+            name_label_button=Gtk.Button.new_with_label(f'{str(key)}:')
+            name_label_button.add_css_class('transparant_button')
+            entry_box.append(name_label_button)
+
+            #text displaying the value of the settings with scroll support
+            entry_label_scroll=Gtk.ScrolledWindow.new()
+            entry_label_scroll.set_kinetic_scrolling(False)
+            entry_label_scroll.set_propagate_natural_width(True)
+            entry_label_scroll.set_hexpand(True)
+            entry_box.append(entry_label_scroll)
+            #the label carrying the entry text
+            entry_label=Gtk.Label.new(str(val))
+            entry_label.set_halign(Gtk.Align.START)
+            entry_label_scroll.set_child(entry_label)
+
+            seperator=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
+            self.append(seperator)
+
+            #connect name label button same as edit button
+            name_label_button.connect('clicked',self.edit_entry,entry_box,entry_label_scroll)
+        self.append(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+    def edit_entry(self,edit_button,entry_box,entry_label_scroll):
+        edit_button.disconnect_by_func(self.edit_entry)
+        #text entry
+        text_entry_storage=Gtk.EntryBuffer.new(entry_box.get_last_child().get_first_child().get_first_child().get_text(),-1)
+        text_entry=Gtk.Entry.new_with_buffer(text_entry_storage)
+        text_entry.set_hexpand(True)
+
+        #remove the entry label and add the text entry box
+        entry_box.remove(entry_box.get_last_child())
+        entry_box.append(text_entry)
+
+        #make the setting name as a save button
+        edit_button.connect('clicked',self.save_entry,entry_box,edit_button,entry_label_scroll)
+
+    def save_entry(self,caller_obj,entry_box,edit_button,entry_label_scroll):
+        #disconnect from save function
+        caller_obj.disconnect_by_func(self.save_entry)
+        #the text in the entry with scroll
+        entry_text=entry_box.get_last_child().get_buffer().get_text()
+        #update the preferences dictionary
+        self.application.preferences[entry_box.get_first_child().props.label[:-1]]=entry_text
+        self.application.update_vars()
+        #set the text of entry label
+        entry_label_scroll.get_first_child().get_first_child().set_text(entry_text)
+        #remove the text entry and add text label and edit button
+        entry_box.remove(entry_box.get_last_child())
+        entry_box.append(entry_label_scroll)
+
+        edit_button.connect('clicked',self.edit_entry,entry_box,entry_label_scroll)
+
+#settings page-> appearance settings 
+class appearance_settings_box(Gtk.Box):
+    def __init__(self,application):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        self.application=application
+        self.set_spacing(10)
+
         label=Gtk.Label.new("Appearance settings")
         label.set_valign(Gtk.Align.START)
-        self.settings_box.append(label)
-        self.props.title="settings/appearance"
+        self.append(label)
 
         #shapes
         shapes_settings_label=Gtk.Label.new("shapes:")
         shapes_settings_label.set_halign(Gtk.Align.START)
-        self.settings_box.append(shapes_settings_label)
+        self.append(shapes_settings_label)
         shape_buttons_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
-        self.settings_box.append(shape_buttons_box)
+        self.append(shape_buttons_box)
         #default shapes button
         default_shapes_button=Gtk.CheckButton.new_with_label("default")
         default_shapes_button.set_action_name('app.shapes')
@@ -174,20 +317,20 @@ class settings_page(Gtk.ApplicationWindow):
         #round shapes button
         round_shapes_button=Gtk.CheckButton.new_with_label("round")
         round_shapes_button.set_action_name('app.shapes')
-        round_shapes_button.set_action_target_value(GLib.Variant.new_string(self.props.application.css_files_paths['round_css']))
+        round_shapes_button.set_action_target_value(GLib.Variant.new_string(self.application.css_files_paths['round_css']))
         round_shapes_button.set_group(default_shapes_button)
         shape_buttons_box.append(round_shapes_button)
         
         #add seperator
         seperator=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
-        self.settings_box.append(seperator)
+        self.append(seperator)
 
         #colors
         colors_settings_label=Gtk.Label.new("colors:")
         colors_settings_label.set_halign(Gtk.Align.START)
-        self.settings_box.append(colors_settings_label)
+        self.append(colors_settings_label)
         colors_buttons_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
-        self.settings_box.append(colors_buttons_box)
+        self.append(colors_buttons_box)
         #default colors button
         default_colors_button=Gtk.CheckButton.new_with_label("default")
         default_colors_button.set_action_name('app.colors')
@@ -196,23 +339,23 @@ class settings_page(Gtk.ApplicationWindow):
         #dark mode button
         dark_mode_button=Gtk.CheckButton.new_with_label("dark")
         dark_mode_button.set_action_name('app.colors')
-        dark_mode_button.set_action_target_value(GLib.Variant.new_string(self.props.application.css_files_paths['black_shade_css']))
+        dark_mode_button.set_action_target_value(GLib.Variant.new_string(self.application.css_files_paths['black_shade_css']))
         dark_mode_button.set_group(default_colors_button)
         colors_buttons_box.append(dark_mode_button)
         #colorful mode button
         colors_mode_button=Gtk.CheckButton.new_with_label("colorful")
         colors_mode_button.set_action_name('app.colors')
-        colors_mode_button.set_action_target_value(GLib.Variant.new_string(self.props.application.css_files_paths['colorful_css']))
+        colors_mode_button.set_action_target_value(GLib.Variant.new_string(self.application.css_files_paths['colorful_css']))
         colors_mode_button.set_group(default_colors_button)
         colors_buttons_box.append(colors_mode_button)
         
         #opacity slider
         opacity_label=Gtk.Label.new('window opacity:')
         opacity_label.set_halign(Gtk.Align.START)
-        self.settings_box.append(opacity_label)
+        self.append(opacity_label)
 
         opacity_slider_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
-        self.settings_box.append(opacity_slider_box)
+        self.append(opacity_slider_box)
         #slider
         opacity_slider=Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,0.2,1,0.01)
         opacity_slider.set_value(float(self.get_style_from_css_files('window','opacity')))
@@ -223,14 +366,14 @@ class settings_page(Gtk.ApplicationWindow):
 
         #add seperator
         seperator2=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
-        self.settings_box.append(seperator2)
+        self.append(seperator2)
 
         #button images
         images_settings_label=Gtk.Label.new("button icons:")
         images_settings_label.set_halign(Gtk.Align.START)
-        self.settings_box.append(images_settings_label)
+        self.append(images_settings_label)
         images_buttons_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
-        self.settings_box.append(images_buttons_box)
+        self.append(images_buttons_box)
         #no images button
         button_images_no_button=Gtk.CheckButton.new_with_label("no")
         button_images_no_button.set_action_name('app.images')
@@ -239,20 +382,20 @@ class settings_page(Gtk.ApplicationWindow):
         #yes images button
         button_images_yes_button=Gtk.CheckButton.new_with_label("yes")
         button_images_yes_button.set_action_name('app.images')
-        button_images_yes_button.set_action_target_value(GLib.Variant.new_string(self.props.application.css_files_paths['images_css']))
+        button_images_yes_button.set_action_target_value(GLib.Variant.new_string(self.application.css_files_paths['images_css']))
         button_images_yes_button.set_group(button_images_no_button)
         images_buttons_box.append(button_images_yes_button)
 
         #add seperator line
         seperator3=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
-        self.settings_box.append(seperator3)
+        self.append(seperator3)
 
         #custom css
         custom_css_label=Gtk.Label.new("custom css:")
         custom_css_label.set_halign(Gtk.Align.START)
-        self.settings_box.append(custom_css_label)
+        self.append(custom_css_label)
         custom_css_buttons_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
-        self.settings_box.append(custom_css_buttons_box)
+        self.append(custom_css_buttons_box)
         #no custom css button
         custom_css_no_button=Gtk.CheckButton.new_with_label('no')
         custom_css_no_button.set_action_name('app.custom_css')
@@ -262,18 +405,21 @@ class settings_page(Gtk.ApplicationWindow):
         custom_css_yes_button=Gtk.CheckButton.new_with_label('yes')
         custom_css_yes_button.set_group(custom_css_no_button)
         custom_css_yes_button.set_action_name('app.custom_css')
-        custom_css_yes_button.set_action_target_value(GLib.Variant.new_string(self.props.application.css_files_paths['custom_css']))
+        custom_css_yes_button.set_action_target_value(GLib.Variant.new_string(self.application.css_files_paths['custom_css']))
         custom_css_buttons_box.append(custom_css_yes_button)
         
         #font size increase or decrease
         font_size_settings_label=Gtk.Label.new("font size")
         font_size_settings_label.set_halign(Gtk.Align.START)
-        self.settings_box.append(font_size_settings_label)
-        font_size_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
-        self.settings_box.append(font_size_box)
+        self.append(font_size_settings_label)
         #font size text box
+        font_size_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
+        self.append(font_size_box)
+        #font size text entry
         font_size_storage=Gtk.EntryBuffer.new(self.get_style_from_css_files('label','font-size'),-1)
         self.font_size_text_box=Gtk.Entry.new_with_buffer(font_size_storage)
+        self.font_size_text_box.set_hexpand(True)
+        self.font_size_text_box.connect('activate',self.change_font_size)
         font_size_box.append(self.font_size_text_box)
         #increase font size
         increase_button=Gtk.Button.new_with_label('+')
@@ -286,38 +432,53 @@ class settings_page(Gtk.ApplicationWindow):
 
         #add seperator
         seperator4=Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
-        self.settings_box.append(seperator4)
+        self.append(seperator4)
 
         #general settings checkboxes
         #other styles
         self.styles_css_checkbox=Gtk.CheckButton.new_with_label("remove other styles")
-        self.settings_box.append(self.styles_css_checkbox)
+        self.styles_css_checkbox.connect('toggled',self.change_styles,(self.application.css_files_paths["round_css"],"shapes"))
+        self.append(self.styles_css_checkbox)
         #color styles
         self.white_mode_css_checkbox=Gtk.CheckButton.new_with_label("white mode")
-        self.settings_box.append(self.white_mode_css_checkbox)
-
+        self.white_mode_css_checkbox.connect('toggled',self.change_styles,(self.application.css_files_paths["colorful_css"],"colors"))
+        self.append(self.white_mode_css_checkbox)
         #button states
-        if self.props.application.style_preference['shapes'] != '':
+        if self.application.style_preference['shapes'] != '':
             self.styles_css_checkbox.props.active=False
         else:
             self.styles_css_checkbox.props.active=True
-        if self.props.application.style_preference['colors']!='':
+        if self.application.style_preference['colors']!='':
             self.white_mode_css_checkbox.props.active=False
         else:
             self.white_mode_css_checkbox.props.active=True
-        #button functions
-        self.styles_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["round_css"],"shapes"))
-        self.white_mode_css_checkbox.connect('toggled',self.change_styles,(self.props.application.css_files_paths["colorful_css"],"colors"))
+
+        #message label with scroll support
+        message_label_scroll=Gtk.ScrolledWindow.new()
+        self.message_label=Gtk.Label.new()
+        message_label_scroll.set_child(self.message_label)
+        self.append(message_label_scroll)
+        self.application.props.active_window.message_label=self.message_label
+
+    #change appearance(for checkbuttons)
+    def change_styles(self,check_button,style_providers_list):
+        if check_button.props.active == False:
+            self.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(style_providers_list[0]))
+            self.application.style_preference[style_providers_list[1]]=style_providers_list[0]
+        else:
+            self.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(''))
+            self.application.style_preference[style_providers_list[1]]=''
+        self.application.reload_styles()
 
     def update_window_opacity(self,slider):
         opacity=slider.get_value()
         self.update_style_to_custom_css_file({'window':{'opacity':str(opacity)}})
-        self.props.application.reload_styles()
-    def change_font_size(self,caller_obj,mode,increase_by_num=1):
+        self.application.reload_styles()
+    def change_font_size(self,caller_obj,mode='update',increase_by_num=1):
         #get current font size
         current_font_size=self.font_size_text_box.get_buffer().get_text()
         if current_font_size[-2:] != 'px':
-            print('please enter font size in pixel(px) unit')
+            print(f'{current_font_size} please enter font size in pixel(px) unit')
             current_font_size=self.get_style_from_css_files('label','font-size')
         #convert from pixel(px) unit string to integer
         try:
@@ -333,6 +494,8 @@ class settings_page(Gtk.ApplicationWindow):
             current_font_size-=increase_by_num
         elif mode=='decrease' and current_font_size<=0:
             print('negative font size')
+        elif mode=='update':
+            pass
         else:
             print('>unknown mode in increase/decrease font size')
 
@@ -345,12 +508,12 @@ class settings_page(Gtk.ApplicationWindow):
         self.update_style_to_custom_css_file({'label,text':{'font-size':current_font_size}})
         
         #reload the styles of the running application
-        self.props.application.reload_styles()
+        self.application.reload_styles()
     #update font size into a custom css file
     def update_style_to_custom_css_file(self,css_dict):
         css_file_contents=''
         try:
-            css_file=open(self.props.application.css_files_paths['custom_css'],'r')
+            css_file=open(self.application.css_files_paths['custom_css'],'r')
             css_file_contents=css_file.read()
             css_file.close()
         except FileNotFoundError:
@@ -359,7 +522,7 @@ class settings_page(Gtk.ApplicationWindow):
             print("Error"+str(a))
             return
 
-        existing_css_dict=self.props.application.read_css(css_file_contents)
+        existing_css_dict=self.application.read_css(css_file_contents)
         existing_css_dict.update(css_dict)
         #construct the content to write in the css file
         css_label_string=''
@@ -376,7 +539,7 @@ class settings_page(Gtk.ApplicationWindow):
 
         #open the custom css file to write the new font size
         try:
-            css_file=open(self.props.application.css_files_paths['custom_css'],'w')
+            css_file=open(self.application.css_files_paths['custom_css'],'w')
             #write the css label string constructed above to the custom css file
             css_file.write(css_label_string)
             css_file.close()
@@ -388,10 +551,10 @@ class settings_page(Gtk.ApplicationWindow):
     def get_style_from_css_files(self,category,style):
         #read css files to get font size
         #custom css file read
-        custom_css_file_path=self.props.application.style_preference['custom_css']
+        custom_css_file_path=self.application.style_preference['custom_css']
         if os.path.isfile(custom_css_file_path):
             custom_css_file_contents=read_file(custom_css_file_path)
-            css_dict=self.props.application.read_css(custom_css_file_contents)
+            css_dict=self.application.read_css(custom_css_file_contents)
             try:
                 style_value=css_dict[category][style]
                 print(f'{category}->{style}:{style_value} found in custom css file')
@@ -401,9 +564,9 @@ class settings_page(Gtk.ApplicationWindow):
             except Exception as e:
                 print(e)
         #rounded_edges css file read
-        css_file_path=self.props.application.css_files_paths['round_css']
+        css_file_path=self.application.css_files_paths['round_css']
         css_file_contents=read_file(css_file_path)
-        css_dict=self.props.application.read_css(css_file_contents)
+        css_dict=self.application.read_css(css_file_contents)
         try:
             style_value=css_dict[category][style]
             print(f'{category}->{style_value}:{style} found in rounded_edges file')
@@ -415,68 +578,105 @@ class settings_page(Gtk.ApplicationWindow):
 
         print(f'style {style} from {category} not found while searching custom and rounded_edges css files')
         return ''
-    #database settings
-    def db_settings_display(self,caller_obj):
-        self.reload()
-        self.current_page='database_settings'
-        self.props.title="settings/database"
+class database_settings_box(Gtk.Box):
+    def __init__(self,application):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        self.set_spacing(10)
+        self.application=application
         #database directory message display
         db_dir_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
         db_dir_box.set_valign(Gtk.Align.START)
 
-        db_dir_label=Gtk.Label.new("Current database name:")
-        database_directory_entry_buffer=Gtk.EntryBuffer.new(self.props.application.db_name,-1)
-        database_directory_textbox=Gtk.Entry.new_with_buffer(database_directory_entry_buffer)
-        database_directory_textbox.set_overwrite_mode(False)
-        database_directory_textbox.set_max_length(database_directory_textbox.get_text_length())
+        db_dir_label=Gtk.Label.new(f"Current database name: {self.application.db_name}")
+        db_dir_label.set_halign(Gtk.Align.START)
+        db_dir_label.set_hexpand(True)
         
         db_dir_edit_button=Gtk.Button.new_with_label("Edit")
-        db_dir_edit_button.connect('clicked',self.on_db_name_edit_button_click,database_directory_textbox,database_directory_entry_buffer,db_dir_box)
+        db_dir_edit_button.connect('clicked',self.on_db_name_edit_button_click,db_dir_label,db_dir_box)
 
         db_dir_box.append(db_dir_label)
-        db_dir_box.append(database_directory_textbox)
         db_dir_box.append(db_dir_edit_button)
 
         #message text
-        if self.props.application.db_cursor!=None:
+        if self.application.db_cursor!=None:
             connection_status_message="Connection to database available"
         else:
             connection_status_message="Connection to database Unavailable!"
-        self.message_label=Gtk.Label.new(connection_status_message)
-        #scrolling support for message text
+
+        #message text with scroll support
         message_label_scroll=Gtk.ScrolledWindow.new()
         message_label_scroll.set_propagate_natural_height(True)
+        self.message_label=Gtk.Label.new(connection_status_message)
         message_label_scroll.set_child(self.message_label)
+        #set the current pages's message label as this message label
+        self.application.props.active_window.message_label=self.message_label
 
         #reconnect to database button
         connect_to_db_button=Gtk.Button.new_with_label("retry connecting to database")
         connect_to_db_button.set_action_name('win.retry_connection_to_db')
 
         #add to settings window
-        self.settings_box.append(db_dir_box)
-        self.settings_box.append(connect_to_db_button)
-        self.settings_box.append(message_label_scroll)
-    #users settings
-    def users_display(self,caller_obj):
-        self.reload()
-        self.current_page='users_settings'
-        self.props.title="settings/users"
+        self.append(db_dir_box)
+        self.append(connect_to_db_button)
+        self.append(message_label_scroll)
+    #edit database name
+    def on_db_name_edit_button_click(self,caller_obj,db_dir_label,db_dir_box):
+        #change mode allow editing
+        db_dir_label.set_text("Current database name:")
+        db_dir_label.set_hexpand(False)
+        db_dir_box.remove(caller_obj)
+        #database directory entry box
+        database_directory_entry_buffer=Gtk.EntryBuffer.new(self.application.db_name,-1)
+        database_directory_textbox=Gtk.Entry.new_with_buffer(database_directory_entry_buffer)
+        database_directory_textbox.set_hexpand(True)
+        db_dir_box.insert_child_after(database_directory_textbox,db_dir_label)
+        #save the changes
+        save_button=Gtk.Button.new_with_label("Save")
+        db_dir_box.append(save_button)
+        #button function
+        save_button.connect('clicked',self.db_name_save_button_click,db_dir_box,database_directory_textbox,caller_obj)
 
-        users=self.props.application.users
+    #save the new database name
+    def db_name_save_button_click(self,caller_obj,db_dir_box,db_entry,edit_button):
+        self.application.db_name=db_entry.get_buffer().get_text()
+        print("saved")
+        #remove save button
+        db_dir_box.remove(caller_obj)
+        #remove database name entry box
+        db_dir_box.remove(db_entry)
+        #set the label text
+        db_dir_box.get_first_child().set_text(f'Current database name: {self.application.db_name}')
+        db_dir_box.get_first_child().set_hexpand(True)
+        db_dir_box.get_first_child().set_halign(Gtk.Align.START)
+        #remove edit button
+        db_dir_box.append(edit_button)
+class users_settings_page_box(Gtk.Box):
+    def __init__(self,application):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        self.set_spacing(10)
+        self.application=application
+
+        users=self.application.users
         #no users message
-        if len(self.props.application.users.items()) == 0:
+        if len(self.application.users.items()) == 0:
             message=Gtk.Label.new("No users in record!")
             message.set_valign(Gtk.Align.START)
-            self.settings_box.append(message)
+            self.append(message)
         #users
         users_buttons_scroller=Gtk.ScrolledWindow.new()
-        self.users_buttons_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,4)
-        user_operations_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
-        self.messages_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,3)
+        self.append(users_buttons_scroller)
 
-        self.settings_box.append(users_buttons_scroller)
-        self.settings_box.append(user_operations_box)
-        self.settings_box.append(self.messages_box)
+        self.users_buttons_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,4)
+
+        user_operations_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
+        self.append(user_operations_box)
+
+        #message label with scroll support
+        message_label_scroll=Gtk.ScrolledWindow.new()
+        self.message_label=Gtk.Label.new()
+        message_label_scroll.set_child(self.message_label)
+        self.append(message_label_scroll)
+        self.application.props.active_window.message_label=self.message_label
 
         users_buttons_scroller.set_propagate_natural_height(True)
         users_buttons_scroller.set_propagate_natural_width(True)
@@ -494,50 +694,6 @@ class settings_page(Gtk.ApplicationWindow):
         add_user_button.connect('clicked',self.open_login_page)
         remove_user_button.connect('clicked',self.remove_current_user,users_buttons_scroller)
 
-    #change appearance
-    def change_styles(self,check_button,style_providers_list):
-        if check_button.props.active == False:
-            self.props.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(style_providers_list[0]))
-            self.props.application.style_preference[style_providers_list[1]]=style_providers_list[0]
-        else:
-            self.props.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(''))
-            self.props.application.style_preference[style_providers_list[1]]=''
-        self.props.application.reload_styles()
-    #edit database name
-    def on_db_name_edit_button_click(self,caller_obj,db_entry,db_entry_buffer,db_dir_box):
-        #change mode allow editing
-        db_entry.set_overwrite_mode(True)
-        db_entry.set_max_length(0)
-        db_dir_box.remove(caller_obj)
-        db_entry_contents=db_entry_buffer.get_text()
-        #save the changes
-        save_button=Gtk.Button.new_with_label("Save")
-        db_dir_box.append(save_button)
-        #button functions
-        save_button.connect('clicked',self.db_name_save_button_click,db_entry_contents,db_dir_box,db_entry,caller_obj)
-
-    #save the new database name
-    def db_name_save_button_click(self,caller_obj,db_entry_contents,db_dir_box,db_entry,edit_button):
-        self.props.application.db_name=db_entry_contents
-        print("saved")
-        db_dir_box.remove(caller_obj)
-        db_dir_box.append(edit_button)
-        db_entry.set_overwrite_mode(True)
-        db_entry.set_max_length(0)
-    #attempt to connect to database
-    def retry_connection_to_db(self,caller_action,param):
-        db_connection_status=self.props.application.connect_to_db_server_and_create_db()
-        if db_connection_status == True:
-            self.message_label.set_text("cursor available!")            
-
-    #on user button action state change
-    def on_user_button_action_state_change(*args):
-        print("state changed",args)
-    #when user button is clicked
-    def on_activate_users_button(self,caller_action,parameter):
-        caller_action.set_state(parameter)
-        self.props.application.current_user_action.set_state(caller_action.props.state)
-        self.update_current_user_message(self.messages_box)
     #display the users in users page
     def update_users_buttons(self,scroller):
         #replace current box
@@ -548,7 +704,7 @@ class settings_page(Gtk.ApplicationWindow):
         button0.set_action_name('win.current_user_button')
         button0.set_action_target_value(GLib.Variant.new_string(""))
         self.users_buttons_box.append(button0)
-        for user_name in self.props.application.users.keys():
+        for user_name in self.application.users.keys():
             if user_name=="":
                 continue
             button=Gtk.CheckButton.new_with_label(user_name)
@@ -556,49 +712,38 @@ class settings_page(Gtk.ApplicationWindow):
             button.set_action_name('win.current_user_button')
             button.set_action_target_value(GLib.Variant.new_string(user_name))
             self.users_buttons_box.append(button)
-        self.update_current_user_message(self.messages_box)
+        self.update_current_user_message()
+
     #remove current user from users list
     def remove_current_user(self,caller_obj,users_buttons_scroller):
-        current_user=self.props.application.current_user_action.props.state.get_string()
+        current_user=self.application.current_user_action.props.state.get_string()
         if current_user=="":
             print("No current user")
-            old_msg=self.messages_box.get_last_child()
-            self.messages_box.remove(old_msg)
-            self.messages_box.append(Gtk.Label.new("No current user!"))
+            self.message_label.set_text("No current user!")
             return
-        if current_user not in self.props.application.users:
+        if current_user not in self.application.users:
             print("ERROR:Current user not in users dictionary")
             return
-        del self.props.application.users[current_user]
-        self.props.application.current_user_action.set_state(GLib.Variant.new_string(""))
+        del self.application.users[current_user]
+        self.application.current_user_action.set_state(GLib.Variant.new_string(""))
         self.update_users_buttons(users_buttons_scroller)
+
     #update current use message in users page
-    def update_current_user_message(self,container):
-        current_msg=container.get_last_child()
-        if current_msg!=None:
-            container.remove(current_msg)
-        message=self.props.application.current_user_action.props.state.get_string()
+    def update_current_user_message(self):
+        message=self.application.current_user_action.props.state.get_string()
         if message != "":
             message="current user: "+message
-        label=Gtk.Label.new(message)
-        self.messages_box.append(label)
+        self.message_label.set_text(message)
+
     #add user
     def open_login_page(self,caller_obj):
-        self.props.application.open_page(None,login_page)
+        self.application.open_page(None,login_page)
+
     #set the state of current_user action to user_name of the given user
     def set_user(self,caller_obj,user_name):
-        self.props.application.current_user_action.set_state(GLib.Variant.new_string(user_name))
-        self.props.application.current_user=user_name
+        self.application.current_user_action.set_state(GLib.Variant.new_string(user_name))
+        self.application.current_user=user_name
         self.update_current_user_message(self.messages_box)
-
-    #reload settings window
-    def reload(self):
-        #relead the settings window by removing and adding new one
-        self.current_page=''
-        self.settings_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
-        self.settings_page_scroll.set_child(self.settings_box)
-        self.main_box.remove(self.main_box.get_last_child())
-        self.main_box.append(self.settings_page_scroll)
 
 #main menu page
 class main_menu_page(Gtk.ApplicationWindow):
