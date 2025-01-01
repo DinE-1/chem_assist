@@ -93,7 +93,7 @@ class settings_page(Gtk.ApplicationWindow):
 
         ##layout
         #main box
-        self.main_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
+        self.main_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,2)
         self.set_child(self.main_box)
 
         side_panel_expander=Gtk.Expander.new_with_mnemonic('_e')
@@ -600,23 +600,33 @@ class database_settings_box(Gtk.Box):
         #database directory message display
         db_dir_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,10)
         db_dir_box.set_valign(Gtk.Align.START)
+        self.append(db_dir_box)
 
+        #label scroll
+        db_dir_label_scroll=Gtk.ScrolledWindow.new()
+        db_dir_label_scroll.set_propagate_natural_height(True)
+        db_dir_label_scroll.set_propagate_natural_width(True)
+        db_dir_label_scroll.set_hexpand(True)
+        #label
         db_dir_label=Gtk.Label.new(f"Current database name: {self.application.db_name}")
         db_dir_label.set_halign(Gtk.Align.START)
-        db_dir_label.set_hexpand(True)
+        db_dir_label_scroll.set_child(db_dir_label)
+        db_dir_box.append(db_dir_label_scroll)
         
         db_dir_edit_button=Gtk.Button.new_with_label("Edit")
-        db_dir_edit_button.connect('clicked',self.on_db_name_edit_button_click,db_dir_label,db_dir_box)
-
-        db_dir_box.append(db_dir_label)
+        db_dir_edit_button.connect('clicked',self.on_db_name_edit_button_click,db_dir_box)
         db_dir_box.append(db_dir_edit_button)
+        
+        #reconnect to database button
+        connect_to_db_button=Gtk.Button.new_with_label("retry connecting to database")
+        connect_to_db_button.set_action_name('win.retry_connection_to_db')
+        self.append(connect_to_db_button)
 
         #message text
         if self.application.db_cursor!=None:
             connection_status_message="Connection to database available"
         else:
             connection_status_message="Connection to database Unavailable!"
-
         #message text with scroll support
         message_label_scroll=Gtk.ScrolledWindow.new()
         message_label_scroll.set_propagate_natural_height(True)
@@ -624,26 +634,21 @@ class database_settings_box(Gtk.Box):
         message_label_scroll.set_child(self.message_label)
         #set the current pages's message label as this message label
         self.application.props.active_window.message_label=self.message_label
-
-        #reconnect to database button
-        connect_to_db_button=Gtk.Button.new_with_label("retry connecting to database")
-        connect_to_db_button.set_action_name('win.retry_connection_to_db')
-
-        #add to settings window
-        self.append(db_dir_box)
-        self.append(connect_to_db_button)
+        #add message label to settings window
         self.append(message_label_scroll)
+    
     #edit database name
-    def on_db_name_edit_button_click(self,caller_obj,db_dir_label,db_dir_box):
+    def on_db_name_edit_button_click(self,caller_obj,db_dir_box):
         #change mode allow editing
-        db_dir_label.set_text("Current database name:")
-        db_dir_label.set_hexpand(False)
+        db_dir_box.get_first_child().get_first_child().get_first_child().set_text("Current database name:")
+        db_dir_box.get_first_child().set_hexpand(False)
         db_dir_box.remove(caller_obj)
         #database directory entry box
         database_directory_entry_buffer=Gtk.EntryBuffer.new(self.application.db_name,-1)
         database_directory_textbox=Gtk.Entry.new_with_buffer(database_directory_entry_buffer)
         database_directory_textbox.set_hexpand(True)
-        db_dir_box.insert_child_after(database_directory_textbox,db_dir_label)
+
+        db_dir_box.insert_child_after(database_directory_textbox,db_dir_box.get_first_child())
         #save the changes
         save_button=Gtk.Button.new_with_label("Save")
         db_dir_box.append(save_button)
@@ -652,14 +657,15 @@ class database_settings_box(Gtk.Box):
 
     #save the new database name
     def db_name_save_button_click(self,caller_obj,db_dir_box,db_entry,edit_button):
-        self.application.db_name=db_entry.get_buffer().get_text()
+        self.application.preferences['database_name']=db_entry.get_buffer().get_text()
+        self.application.update_vars()
         print("saved")
         #remove save button
         db_dir_box.remove(caller_obj)
         #remove database name entry box
         db_dir_box.remove(db_entry)
         #set the label text
-        db_dir_box.get_first_child().set_text(f'Current database name: {self.application.db_name}')
+        db_dir_box.get_first_child().get_first_child().get_first_child().set_text(f'Current database name: {self.application.db_name}')
         db_dir_box.get_first_child().set_hexpand(True)
         db_dir_box.get_first_child().set_halign(Gtk.Align.START)
         #remove edit button
