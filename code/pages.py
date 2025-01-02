@@ -1524,7 +1524,7 @@ class simulator_page(Gtk.ApplicationWindow):
         print(message)
         self.message_label.set_text(message)
 
-    #get database cursot
+    #get database cursor
     def get_database_cursor(self):
         #connect to server
         server_connect_return=self.props.application.connect_to_db_server()
