@@ -60,7 +60,7 @@ class Application(Gtk.Application):
     #database
     db_name=preferences['database_name']
     db_cursor=None
-    database_object=None
+    database_connection=None
 
     #users
     users={'':'',"chem_assist_user":"chem_assist_user_password"}
@@ -228,7 +228,7 @@ class Application(Gtk.Application):
         #hide current window when quiz is open
         self.close_page()
         #open quiz.py quiz page
-        quiz.main(self.database_object)
+        quiz.main(self.database_connection)
         #reshow current window
         self.open_page(None,pages.quiz_main_page)
 
@@ -370,7 +370,7 @@ class Application(Gtk.Application):
         if return_value_from_connect != True:
             return return_value_from_connect
         #get cursor
-        return_value_from_get_cursor=self.get_cursor_from_db_connection(self.database_object)
+        return_value_from_get_cursor=self.get_cursor_from_db_connection(self.database_connection)
         #return the error if failed to get cursor
         if return_value_from_get_cursor !=True:
             return return_value_from_get_cursor
@@ -379,8 +379,8 @@ class Application(Gtk.Application):
     #connect to database server
     def connect_to_db_server(self):
         #close any existing connection
-        if self.database_object != None and self.database_object.is_connected():
-            self.database_object.close()
+        if self.database_connection != None and self.database_connection.is_connected():
+            self.database_connection.close()
 
         #please take backup of database before connecting with path as it may be deleted by this function
         connection_profile={
@@ -390,7 +390,7 @@ class Application(Gtk.Application):
             "collation":"utf8mb4_general_ci"
         }
         try:
-            self.database_object=mysql.connector.connect( **connection_profile)
+            self.database_connection=mysql.connector.connect( **connection_profile)
         except mysql.connector.Error as err:
             message="Error while connecting to database: "+str(err)
             if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
@@ -399,14 +399,14 @@ class Application(Gtk.Application):
             return err
         return True
     #get cursor from database connection
-    def get_cursor_from_db_connection(self,db_connection_object):
+    def get_cursor_from_db_connection(self,db_connection_object=database_connection):
         if db_connection_object == None:
             print(f"cannot get cursor, no database connection obj")
             return
         try:
             self.db_cursor=db_connection_object.cursor()
         except mysql.connector.Error as err:
-            print(f"Error while getting cursor from database connection: {err}: Database_connection:{self.database_object.is_connected}")
+            print(f"Error while getting cursor from database connection: {err}: Database_connection:{self.database_connection.is_connected}")
             return err
         print("=>cursor connected")
         return True

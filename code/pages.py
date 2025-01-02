@@ -618,15 +618,22 @@ class database_settings_box(Gtk.Box):
         db_dir_box.append(db_dir_edit_button)
         
         #reconnect to database button
-        connect_to_db_button=Gtk.Button.new_with_label("retry connecting to database")
+        connect_to_db_button=Gtk.Button.new_with_label("retry connecting to database server")
         connect_to_db_button.set_action_name('win.retry_connection_to_db')
         self.append(connect_to_db_button)
 
+        delete_database_button=Gtk.Button.new_with_label('delete database')
+        delete_database_button.connect('clicked',self.delete_current_database)
+        expander=Gtk.Expander.new('[hidden]')
+        expander.set_child(delete_database_button)
+        self.append(expander)
+
         #message text
-        if self.application.database_object!=None and self.application.database_object.is_connected():
+        if self.application.database_connection!=None and self.application.database_connection.is_connected():
             connection_status_message="Connection to database available"
         else:
-            connection_status_message="Connection to database Unavailable!"
+            connection_status_message="Connection to database unavailable!"
+
         #message text with scroll support
         message_label_scroll=Gtk.ScrolledWindow.new()
         message_label_scroll.set_propagate_natural_height(True)
@@ -636,7 +643,41 @@ class database_settings_box(Gtk.Box):
         self.application.props.active_window.message_label=self.message_label
         #add message label to settings window
         self.append(message_label_scroll)
-    
+
+    def delete_current_database(self,caller_obj):
+        #check for database server connectivity
+        if self.application.database_connection==None or self.application.database_connection.is_connected() == False:
+            print('no connection to database server')
+            self.message_label.set_text('no connection to database server')
+            return
+        #check if there is a current database
+        if self.application.preferences['database_name']==None:
+            print('no current database')
+            self.message_label.set_text('no current database')
+
+        #get database cursor for executing sql commands
+        db_cursor=self.application.database_connection.cursor()
+
+        try:
+            db_cursor.execute(f'drop database {self.application.preferences['database_name']}')
+            print('deleted database '+self.application.preferences['database_name'])
+            self.message_label.set_text('deleted database '+self.application.preferences['database_name'])
+        except mysql.connector.Error as err:
+            #access denied
+            if err.errno == 1044:
+                print(f'access denied for user {self.application.current_user_action.get_state().get_string()}')
+                self.message_label.set_text(str(err))
+            #database doesnt exist
+            elif err.errno == 1008:
+                print(f'database {self.application.preferences['database_name']} doesnt exist',err)
+                self.message_label.set_text(f'database {self.application.preferences['database_name']} doesnt exist\n{str(err)}')
+            else:
+                self.message_label.set_text(str(err))
+        except Exception as err:
+            print('Error while deleting database '+ self.preferences['database_name']+' '+err)
+            self.message_label.set_text('Error while deleting database '+ self.preferences['database_name']+f'\n{str(err)}')
+        self.application.database_connection.commit()
+
     #edit database name
     def on_db_name_edit_button_click(self,caller_obj,db_dir_box):
         #change mode allow editing
@@ -985,7 +1026,7 @@ class reactions_display_page(Gtk.ApplicationWindow):
         #database
         if self.pull_data_from_reactions_table == False:
             title_message=title_message+"(no db connection)"
-        elif self.props.application.database_object.is_connected():
+        elif self.props.application.database_connection.is_connected():
             title_message=title_message[:-1]+",database:"+self.props.application.db_name+")"
         self.set_title(title_message)
         #titlebar
@@ -1111,7 +1152,7 @@ class reactions_display_page(Gtk.ApplicationWindow):
                 delete_reaction_command=f"delete from reactions where name='{self.reactions_list_single_selection.get_model()[selected_row_number].name}'"
                 print(delete_reaction_command)
                 self.props.application.db_cursor.execute(delete_reaction_command)
-                self.props.application.database_object.commit()
+                self.props.application.database_connection.commit()
             except mysql.connector.Error as err:
                 print("error while deleting record from database:",err)
             self.reactions_list_single_selection.get_model().remove(selected_row_number)
@@ -1327,7 +1368,7 @@ class add_reaction_to_db_page(Gtk.ApplicationWindow):
         print(reactions_table_command_string)
         try:
             self.props.application.db_cursor.execute(reactions_table_command_string)
-            self.props.application.database_object.commit()
+            self.props.application.database_connection.commit()
         except mysql.connector.Error as err:
                 print(f"Error while {self.mode}ing reactions details to table:\n",err)
         
@@ -1493,7 +1534,7 @@ class simulator_page(Gtk.ApplicationWindow):
             return False
 
         #get cursor
-        get_cursor_return=self.props.application.get_cursor_from_db_connection(self.props.application.database_object)
+        get_cursor_return=self.props.application.get_cursor_from_db_connection(self.props.application.database_connection)
         #display error if getting cursor fails
         if get_cursor_return != True:
             self.message_label.set_text(str(get_cursor_return))
