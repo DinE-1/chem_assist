@@ -439,7 +439,7 @@ class Application(Gtk.Application):
         preference_string=self.gen_preference_string_from_dict(difference_dict)
         #write preferences to file
         self.write_string_to_file(preference_string)
-    
+
     #generate the changed preferences as string to write into the preferences file
     def gen_preference_string_from_dict(self,dictionary,parent=''):
         preference_string=''
