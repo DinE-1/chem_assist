@@ -11,16 +11,14 @@ current_file_dir_parent=os.path.split(os.path.split(current_file_path)[0])[0] #g
 if getattr(sys,'frozen',False):
     current_file_dir_parent=sys._MEIPASS
 
-style_preference={'colors':'','shapes':'','images':'','custom_css':''}
-css_files_paths={}
 #preferences
 preferences_default={
     #database
     'database_name':'chem_assist_db1',
     'reactions_column_string_max_length':'255', #maximum about of letters to be the records of the reactions table in database
     #style sheets to apply paths
-    'styles':style_preference,
-    'css_files_paths':css_files_paths,
+    'styles':{},
+    'css_files_paths':{},
     #css directory
     'css_dir':os.path.join(current_file_dir_parent,'styles'),
     #user customised css file name

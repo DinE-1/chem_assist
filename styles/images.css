@@ -13,5 +13,5 @@ button.refresh_button{
     background-image: url("../pictures/refresh_button.svg");
 }
 button.start_quiz_button{
-    background-image: url(../pictures/settings.svg);
+    background-image: url('../pictures/settings.svg');
 }
