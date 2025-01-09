@@ -133,7 +133,6 @@ class settings_page(Gtk.ApplicationWindow):
         appearance_settings_button=Gtk.Button.new_with_label("Appearance")
         appearance_settings_button.connect('clicked',self.appearance_display)
         settings_categories_box.append(appearance_settings_button)
-
         #database
         db_settings_button=Gtk.Button.new_with_label("Database")
         db_settings_button.connect('clicked',self.db_settings_display)
@@ -159,36 +158,51 @@ class settings_page(Gtk.ApplicationWindow):
 
         #open users page window if open_page variable is set to users_page
         if self.open_page=="users_page":
-            self.users_display()
+            self.users_display(None)
         if self.open_page=='general_settings':
-            self.general_settings_display()
+            self.general_settings_display(None)
+
     #general settings page
-    def general_settings_display(self,caller_obj=None):
+    def general_settings_display(self,caller_obj):
         self.reload()
         self.current_page='general_settings'
         self.props.title='settings/general_settings'
+        self.current_page_button=caller_obj
+
+        #for the color of the button
+        self.active_page_button=caller_obj
+        self.active_page_button.set_state_flags(Gtk.StateFlags.VISITED,False)
 
         self.settings_box=general_settings_box(self.props.application)
         self.settings_page_scroll.set_child(self.settings_box)
 
     #appearance settings page
-    def appearance_display(self,caller_obj=None):
+    def appearance_display(self,caller_obj):
         self.reload()
         self.current_page='appearance_settings'
         self.props.title="settings/appearance"
+        self.current_page_button=caller_obj
+
+        #for the color of the button
+        self.active_page_button=caller_obj
+        self.active_page_button.set_state_flags(Gtk.StateFlags.VISITED,False)
 
         self.settings_box=appearance_settings_box(self.props.application)
         self.settings_page_scroll.set_child(self.settings_box)
     
     #database settings page
-    def db_settings_display(self,caller_obj=None):
+    def db_settings_display(self,caller_obj):
         self.reload()
         self.current_page='database_settings'
         self.props.title="settings/database"
+        self.current_page_button=caller_obj
+
+        #for the color of the button
+        self.active_page_button=caller_obj
+        self.active_page_button.set_state_flags(Gtk.StateFlags.VISITED,False)
 
         self.settings_box=database_settings_box(self.props.application)
         self.settings_page_scroll.set_child(self.settings_box)
-
     #attempt to connect to database
     def retry_connection_to_db(self,caller_action,param):
         db_connection_status=self.props.application.connect_to_db_server_and_create_db()
@@ -196,10 +210,14 @@ class settings_page(Gtk.ApplicationWindow):
             self.settings_box.message_label.set_text("cursor available!")
 
     #users settings
-    def users_display(self,caller_obj=None):
+    def users_display(self,caller_obj):
         self.reload()
         self.current_page='users_settings'
         self.props.title="settings/users"
+
+        #for the color of the button, set the button state to visited
+        self.active_page_button=caller_obj
+        self.active_page_button.set_state_flags(Gtk.StateFlags.VISITED,False)
 
         self.settings_box=users_settings_page_box(self.props.application)
         self.settings_page_scroll.set_child(self.settings_box)
@@ -211,14 +229,23 @@ class settings_page(Gtk.ApplicationWindow):
     #on user button action state change
     def on_user_button_action_state_change(*args):
         print("state changed",args)
+    
     #reload settings window
     def reload(self):
         #relead the settings window by removing and adding new one
         self.current_page=''
+
+        #for the color of the current page button, remove the visited state for the button
+        try:
+            self.active_page_button.unset_state_flags(Gtk.StateFlags.VISITED)
+        except Exception as e:
+            print(e)
+        
         self.settings_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
         self.settings_page_scroll.set_child(self.settings_box)
         self.main_box.remove(self.main_box.get_last_child())
         self.main_box.append(self.settings_page_scroll)
+
 #settings page-> general settings
 class general_settings_box(Gtk.Box):
     def __init__(self,application):
@@ -486,7 +513,7 @@ class appearance_settings_box(Gtk.Box):
 
     def update_window_opacity(self,slider):
         opacity=slider.get_value()
-        self.update_style_to_custom_css_file({'window':{'opacity':str(opacity)}})
+        self.update_style_to_css_file({'window':{'opacity':str(opacity)}},self.application.css_files_paths['custom_css'])
         self.application.reload_styles()
     def change_font_size(self,caller_obj,mode='update',increase_by_num=1):
         #get current font size
@@ -519,15 +546,15 @@ class appearance_settings_box(Gtk.Box):
         #set the buffer text in pixel unit
         self.font_size_text_box.get_buffer().set_text(current_font_size,-1)
         #update the font size into a custom css file in pixel units
-        self.update_style_to_custom_css_file({'label,text':{'font-size':current_font_size}})
+        self.update_style_to_css_file({'label,text':{'font-size':current_font_size}},self.application.css_files_paths['custom_css'])
         
         #reload the styles of the running application
         self.application.reload_styles()
     #update font size into a custom css file
-    def update_style_to_custom_css_file(self,css_dict):
+    def update_style_to_css_file(self,css_dict,css_file_path):
         css_file_contents=''
         try:
-            css_file=open(self.application.css_files_paths['custom_css'],'r')
+            css_file=open(css_file_path,'r')
             css_file_contents=css_file.read()
             css_file.close()
         except FileNotFoundError:
@@ -553,7 +580,7 @@ class appearance_settings_box(Gtk.Box):
 
         #open the custom css file to write the new font size
         try:
-            css_file=open(self.application.css_files_paths['custom_css'],'w')
+            css_file=open(css_file_path,'w')
             #write the css label string constructed above to the custom css file
             css_file.write(css_label_string)
             css_file.close()
@@ -747,15 +774,15 @@ class users_settings_page_box(Gtk.Box):
         #display the users in users page
         self.update_users_buttons(users_buttons_scroller)
 
-        #operations buttons
+        #buttons
+        #add user button
         add_user_button=Gtk.Button.new_with_label("Add user")
-        remove_user_button=Gtk.Button.new_with_label("Remove current user")
-        
-        user_operations_box.append(remove_user_button)
-        user_operations_box.append(add_user_button)
-        
         add_user_button.connect('clicked',self.open_login_page)
+        user_operations_box.append(add_user_button)
+        #remove user button
+        remove_user_button=Gtk.Button.new_with_label("Remove current user")
         remove_user_button.connect('clicked',self.remove_current_user,users_buttons_scroller)
+        user_operations_box.append(remove_user_button)
 
     #display the users in users page
     def update_users_buttons(self,scroller):
