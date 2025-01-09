@@ -96,13 +96,17 @@ class settings_page(Gtk.ApplicationWindow):
         self.main_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,2)
         self.set_child(self.main_box)
 
-        #side panel hide
+        #side panel hide feature
         side_panel_expander=Gtk.Expander.new_with_mnemonic('_e')
-        try:#get the side panel expanded value from preferences dict
-            side_panel_expanded=eval(self.props.application.preferences['settings_page_side_panel_expanded'])
-        except Exception as e:
-            print(e,',\ndefaulting to settings_page_side_panel_expanded as True')
-            side_panel_expanded=True
+         #setting the value of side panel expand status
+        if type(self.props.application.preferences['settings_page_side_panel_expanded'])==type(True):
+            side_panel_expanded=self.props.application.preferences['settings_page_side_panel_expanded']
+        else:
+            try:#get the side panel expanded value from preferences dict
+                side_panel_expanded=eval(self.props.application.preferences['settings_page_side_panel_expanded'])
+            except Exception as e:
+                print(e,f'it is currently {self.props.application.preferences['settings_page_side_panel_expanded']} of type {type(self.props.application.preferences['settings_page_side_panel_expanded'])},\ndefaulting to settings_page_side_panel_expanded as True')
+                side_panel_expanded=True
         side_panel_expander.set_expanded(side_panel_expanded)
         side_panel_expander.connect('activate',self.side_panel_expanded_state_saver)
         self.main_box.append(side_panel_expander)

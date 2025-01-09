@@ -81,10 +81,10 @@ class Application(Gtk.Application):
     app_css_provider=Gtk.CssProvider.new()
     custom_css_provider=Gtk.CssProvider.new()
     current_css_providers={
-        'app':app_css_provider,
         "shapes":other_styles_css_provider,
         "colors":colors_css_provider,
         "images":images_css_provider,
+        'app':app_css_provider,
         "custom_css":custom_css_provider
     }
 
@@ -133,7 +133,7 @@ class Application(Gtk.Application):
         custom_css_action=Gio.SimpleAction.new_stateful('custom_css',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference['custom_css']))
         self.add_action(custom_css_action)
         custom_css_action.connect('activate',self.css_reload_and_change_action_state)
-        
+
         #page opening actions
         open_reactions_page_action=Gio.SimpleAction.new("open_reactions_page",None)
         open_reactions_page_action.connect('activate',self.on_open_reactions_page)
