@@ -96,8 +96,15 @@ class settings_page(Gtk.ApplicationWindow):
         self.main_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,2)
         self.set_child(self.main_box)
 
+        #side panel hide
         side_panel_expander=Gtk.Expander.new_with_mnemonic('_e')
-        side_panel_expander.set_expanded(True)
+        try:#get the side panel expanded value from preferences dict
+            side_panel_expanded=eval(self.props.application.preferences['settings_page_side_panel_expanded'])
+        except Exception as e:
+            print(e,',\ndefaulting to settings_page_side_panel_expanded as True')
+            side_panel_expanded=True
+        side_panel_expander.set_expanded(side_panel_expanded)
+        side_panel_expander.connect('activate',self.side_panel_expanded_state_saver)
         self.main_box.append(side_panel_expander)
         #scrolling support for side panel
         side_panel_scroll=Gtk.ScrolledWindow.new()
@@ -161,6 +168,11 @@ class settings_page(Gtk.ApplicationWindow):
             self.users_display(None)
         if self.open_page=='general_settings':
             self.general_settings_display(None)
+
+    #side panel expanded state saver
+    def side_panel_expanded_state_saver(self,caller_obj):
+        #save the expander's state to the preferences dictionary in application class
+        self.props.application.preferences['settings_page_side_panel_expanded']=not caller_obj.props.expanded
 
     #general settings page
     def general_settings_display(self,caller_obj):
@@ -239,8 +251,8 @@ class settings_page(Gtk.ApplicationWindow):
         try:
             self.active_page_button.unset_state_flags(Gtk.StateFlags.VISITED)
         except Exception as e:
-            print(e)
-        
+            print(e, f'settings page current window={self.current_page}')
+
         self.settings_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
         self.settings_page_scroll.set_child(self.settings_box)
         self.main_box.remove(self.main_box.get_last_child())
@@ -330,7 +342,7 @@ class general_settings_box(Gtk.Box):
         #remove the text entry and add text label and edit button
         entry_box.remove(entry_box.get_last_child())
         entry_box.append(entry_label_scroll)
-
+        #change the category display button's function to edit again
         edit_button.connect('clicked',self.edit_entry,entry_box,entry_label_scroll)
 
 #settings page-> appearance settings 

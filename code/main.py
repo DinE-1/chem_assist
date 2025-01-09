@@ -24,7 +24,9 @@ preferences_default={
     #user customised css file name
     'user_custom_css_file_name':'custom.css',
     #max number of windows to store in window history list
-    'window_history_limit':10
+    'window_history_limit':10,
+    #settings page side panel expanded or not
+    'settings_page_side_panel_expanded':True
 }
 
 #paths of css files
@@ -79,10 +81,10 @@ class Application(Gtk.Application):
     app_css_provider=Gtk.CssProvider.new()
     custom_css_provider=Gtk.CssProvider.new()
     current_css_providers={
+        'app':app_css_provider,
         "shapes":other_styles_css_provider,
         "colors":colors_css_provider,
         "images":images_css_provider,
-        'app':app_css_provider,
         "custom_css":custom_css_provider
     }
 
@@ -198,8 +200,9 @@ class Application(Gtk.Application):
     #update the variables from preferences dictionary
     def update_vars(self):
         self.db_name=self.preferences['database_name']
-        self.css_files_paths=self.preferences['css_files_paths']
-        self.style_preference=self.preferences['styles']
+    def update_preferences_dict(self):
+        self.preferences['database_name']=self.db_name
+
     #pages open
     #reactions page open
     def on_open_reactions_page(self,caller_action,param):
@@ -428,9 +431,11 @@ class Application(Gtk.Application):
                 return err
         print("=>created table 'reactions'")
         return True
+    
     #save preferences into a file while closing application
     def on_close(self,caller_object):
-        self.preferences['db_name']=self.db_name
+        #update the values in preferences dict from the variables
+        self.update_preferences_dict()
         #put the differences from default preferences into a dictionary
         difference_dict=self.dict_compare(preferences_default,self.preferences)
         #generate a string to write into the preferences file
@@ -447,7 +452,7 @@ class Application(Gtk.Application):
                 continue
             preference_string=preference_string + parent + '~' + str(name) + "='" + str(value) + "'\n"
         return preference_string
-
+    
     #compare 2 dictionaries and output another dictionary containing the changed values of dict_default
     def dict_compare(self,dict_default,dict_changed):
         difference_dict={}
@@ -464,11 +469,11 @@ class Application(Gtk.Application):
         #write a string to the preferences file
         try:
             #open file
-            preference_file=open(self.preference_file_name,'w')
+            preference_file=open(os.path.join(current_file_dir_parent,self.preference_file_name),'w')
             #write to file
             preference_file.write(string)
-        except Execption as e:
-            print(e)
+        except Exception as e:
+            print(e,'while opening preferences file in write mode')
             return False
         return True
 
