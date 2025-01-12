@@ -84,7 +84,7 @@ class welcome_page(Gtk.ApplicationWindow):
 #settings page
 class settings_page(Gtk.ApplicationWindow):
     message_box=True
-    open_page=""
+    open_page=''
     current_page=''
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs,title="settings")
@@ -169,9 +169,11 @@ class settings_page(Gtk.ApplicationWindow):
 
         #open users page window if open_page variable is set to users_page
         if self.open_page=="users_page":
-            self.users_display(None)
-        if self.open_page=='general_settings':
-            self.general_settings_display(None)
+            self.users_display(users_settings_button)
+            settings_page.open_page=''
+        elif self.open_page=='general_settings':
+            self.general_settings_display(general_settings_button)
+            settings_page.open_page=''
 
     #side panel expanded state saver
     def side_panel_expanded_state_saver(self,caller_obj):
