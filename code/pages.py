@@ -1430,7 +1430,7 @@ class simulator_page(Gtk.ApplicationWindow):
         main_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,5)
 
         #scroll for window
-        search_reaction_page_scroll=Gtk.ScrolledWindow()
+        search_reaction_page_scroll=Gtk.ScrolledWindow.new()
         search_reaction_page_scroll.set_child(main_box)
         self.set_child(search_reaction_page_scroll)
 
@@ -1452,7 +1452,9 @@ class simulator_page(Gtk.ApplicationWindow):
         main_box.append(add_reactants_button)
         #result message
         self.result_message=Gtk.Label.new()
-        main_box.append(self.result_message)
+        result_message_scroll=Gtk.ScrolledWindow.new()
+        result_message_scroll.set_child(self.result_message)
+        main_box.append(result_message_scroll)
         #search button
         search_button=Gtk.Button.new_with_label("search")
         search_button.set_halign(Gtk.Align.CENTER)
@@ -1464,7 +1466,9 @@ class simulator_page(Gtk.ApplicationWindow):
         #message box
         self.message_label=Gtk.Label.new()
         self.message_label.set_valign(Gtk.Align.END)
-        main_box.append(self.message_label)
+        message_label_scroll=Gtk.ScrolledWindow.new()
+        message_label_scroll.set_child(self.message_label)
+        main_box.append(message_label_scroll)
     
     def add_reactant_entry(self,caller_obj):
         self.reactants_count+=1
