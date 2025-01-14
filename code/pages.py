@@ -1472,13 +1472,13 @@ class simulator_page(Gtk.ApplicationWindow):
 
         #scroll for message label
         message_label_scroll=Gtk.ScrolledWindow.new()
-        message_label_scroll.set_child(self.message_label)
         message_label_scroll.set_propagate_natural_height(True)
         message_label_scroll.set_propagate_natural_width(True)
         main_box.append(message_label_scroll)
         #message label
         self.message_label=Gtk.Label.new()
         self.message_label.set_valign(Gtk.Align.END)
+        message_label_scroll.set_child(self.message_label)
     
     def add_reactant_entry(self,caller_obj):
         self.reactants_count+=1
