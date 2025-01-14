@@ -1432,8 +1432,8 @@ class simulator_page(Gtk.ApplicationWindow):
         #scroll for window main box
         search_reaction_page_scroll=Gtk.ScrolledWindow.new()
         search_reaction_page_scroll.set_child(main_box)
-        result_message_scroll.set_propagate_natural_height(True)
-        result_message_scroll.set_propagate_natural_width(True)
+        search_reaction_page_scroll.set_propagate_natural_height(True)
+        search_reaction_page_scroll.set_propagate_natural_width(True)
         self.set_child(search_reaction_page_scroll)
 
         #reactants box
@@ -1473,8 +1473,8 @@ class simulator_page(Gtk.ApplicationWindow):
         #scroll for message label
         message_label_scroll=Gtk.ScrolledWindow.new()
         message_label_scroll.set_child(self.message_label)
-        result_message_scroll.set_propagate_natural_height(True)
-        result_message_scroll.set_propagate_natural_width(True)
+        message_label_scroll.set_propagate_natural_height(True)
+        message_label_scroll.set_propagate_natural_width(True)
         main_box.append(message_label_scroll)
         #message label
         self.message_label=Gtk.Label.new()
