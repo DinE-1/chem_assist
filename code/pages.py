@@ -1428,7 +1428,11 @@ class simulator_page(Gtk.ApplicationWindow):
         header_bar.set_titlebar(header_bar,self)
 
         main_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,5)
-        self.set_child(main_box)
+
+        #scroll for window
+        search_reaction_page_scroll=Gtk.ScrolledWindow()
+        search_reaction_page_scroll.set_child(main_box)
+        self.set_child(search_reaction_page_scroll)
 
         #reactants box
         reactants_box_scroll=Gtk.ScrolledWindow.new()
