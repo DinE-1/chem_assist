@@ -1427,11 +1427,13 @@ class simulator_page(Gtk.ApplicationWindow):
         super().__init__(*args,**kwargs,title="simulate")
         header_bar.set_titlebar(header_bar,self)
 
+        #main box
         main_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,5)
-
-        #scroll for window
+        #scroll for window main box
         search_reaction_page_scroll=Gtk.ScrolledWindow.new()
         search_reaction_page_scroll.set_child(main_box)
+        result_message_scroll.set_propagate_natural_height(True)
+        result_message_scroll.set_propagate_natural_width(True)
         self.set_child(search_reaction_page_scroll)
 
         #reactants box
@@ -1450,11 +1452,16 @@ class simulator_page(Gtk.ApplicationWindow):
         add_reactants_button.set_halign(Gtk.Align.CENTER)
         add_reactants_button.connect('clicked',self.add_reactant_entry)
         main_box.append(add_reactants_button)
+        
+        #scroll for result message
+        result_message_scroll=Gtk.ScrolledWindow.new()
+        result_message_scroll.set_propagate_natural_height(True)
+        result_message_scroll.set_propagate_natural_width(True)
+        main_box.append(result_message_scroll)
         #result message
         self.result_message=Gtk.Label.new()
-        result_message_scroll=Gtk.ScrolledWindow.new()
         result_message_scroll.set_child(self.result_message)
-        main_box.append(result_message_scroll)
+        
         #search button
         search_button=Gtk.Button.new_with_label("search")
         search_button.set_halign(Gtk.Align.CENTER)
@@ -1463,12 +1470,15 @@ class simulator_page(Gtk.ApplicationWindow):
         search_button.connect('clicked',self.display_products)
         main_box.append(search_button)
 
-        #message box
-        self.message_label=Gtk.Label.new()
-        self.message_label.set_valign(Gtk.Align.END)
+        #scroll for message label
         message_label_scroll=Gtk.ScrolledWindow.new()
         message_label_scroll.set_child(self.message_label)
+        result_message_scroll.set_propagate_natural_height(True)
+        result_message_scroll.set_propagate_natural_width(True)
         main_box.append(message_label_scroll)
+        #message label
+        self.message_label=Gtk.Label.new()
+        self.message_label.set_valign(Gtk.Align.END)
     
     def add_reactant_entry(self,caller_obj):
         self.reactants_count+=1
