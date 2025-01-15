@@ -149,7 +149,7 @@ class settings_page(Gtk.ApplicationWindow):
         db_settings_button.connect('clicked',self.db_settings_display)
         settings_categories_box.append(db_settings_button)
         #users
-        users_settings_button=Gtk.Button.new_with_label("Users")
+        users_settings_button=Gtk.Button.new_with_label("SQL Users")
         users_settings_button.connect('clicked',self.users_display)
         settings_categories_box.append(users_settings_button)
 
@@ -167,7 +167,7 @@ class settings_page(Gtk.ApplicationWindow):
         retry_connection_to_db_action.connect('activate',self.retry_connection_to_db)
         self.add_action(retry_connection_to_db_action)
 
-        #open users page window if open_page variable is set to users_page
+        #open sql users page window if open_page variable is set to users_page
         if self.open_page=="users_page":
             self.users_display(users_settings_button)
             settings_page.open_page=''
@@ -231,7 +231,7 @@ class settings_page(Gtk.ApplicationWindow):
     def users_display(self,caller_obj):
         self.reload()
         self.current_page='users_settings'
-        self.props.title="settings/users"
+        self.props.title="settings/sql_users"
 
         #for the color of the button, set the button state to visited
         self.active_page_button=caller_obj
@@ -765,7 +765,7 @@ class users_settings_page_box(Gtk.Box):
         users=self.application.users
         #no users message
         if len(self.application.users.items()) == 0:
-            message=Gtk.Label.new("No users in record!")
+            message=Gtk.Label.new("No sql users in record!")
             message.set_valign(Gtk.Align.START)
             self.append(message)
         #users
@@ -789,7 +789,7 @@ class users_settings_page_box(Gtk.Box):
         users_buttons_scroller.set_propagate_natural_height(True)
         users_buttons_scroller.set_propagate_natural_width(True)
         users_buttons_scroller.set_child(self.users_buttons_box)
-        #display the users in users page
+        #display the users in sql users page
         self.update_users_buttons(users_buttons_scroller)
 
         #buttons
@@ -802,7 +802,7 @@ class users_settings_page_box(Gtk.Box):
         remove_user_button.connect('clicked',self.remove_current_user,users_buttons_scroller)
         user_operations_box.append(remove_user_button)
 
-    #display the users in users page
+    #display the users in sql users page
     def update_users_buttons(self,scroller):
         #replace current box
         self.users_buttons_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
@@ -836,7 +836,7 @@ class users_settings_page_box(Gtk.Box):
         self.application.current_user_action.set_state(GLib.Variant.new_string(""))
         self.update_users_buttons(users_buttons_scroller)
 
-    #update current use message in users page
+    #update current use message in sql users page
     def update_current_user_message(self):
         message=self.application.current_user_action.props.state.get_string()
         if message != "":
