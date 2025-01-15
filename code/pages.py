@@ -1582,7 +1582,7 @@ class simulator_page(Gtk.ApplicationWindow):
             if table_search_result is None:
                 self.display(f'Table \'{table_name}\' not found, enter the reactions page for creating a new table and adding entries')
             else:
-                self.display(f'Error while looking for table \'{table_name}\' ',err)
+                self.display(f'Error while looking for table \'{table_name}\' ',e)
             return False
 
         return True
