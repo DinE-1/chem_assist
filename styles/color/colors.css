@@ -29,6 +29,9 @@ button.start_quiz_button:hover{
 button.reactions_button_main_menu{
     background: rgb(17, 88, 10);
 }
+button.reactions_button_main_menu:hover{
+    background: rgb(100, 48, 48);
+}
 button.icon_button{
     background: rgba(255, 255, 0, 0);
 }
