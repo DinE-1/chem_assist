@@ -344,6 +344,7 @@ class Application(Gtk.Application):
         #create database
         try:
             db_cursor.execute(f'create database {self.db_name};')
+            print(f'=>created database {self.db_name}')
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_DB_CREATE_EXISTS:
                 #if database already exists
@@ -352,14 +353,13 @@ class Application(Gtk.Application):
             else:
                 print("Error while CREATING database:",err)
                 return err
-            print(f"=>created database {self.db_name}")
         #use database
         try:
             db_cursor.execute(f'use {self.db_name};')
+            print(f'=>using database {self.db_name}')
         except mysql.connector.Error as err:
             print("Error while USING database",err)
             return err
-        print(f'=>using database {self.db_name}')
         return True
 
     #connect to db and get cursor
@@ -405,10 +405,10 @@ class Application(Gtk.Application):
             return
         try:
             self.db_cursor=db_connection_object.cursor()
+            print("=>cursor connected")
         except mysql.connector.Error as err:
             print(f"Error while getting cursor from database connection: {err}: Database_connection:{self.database_connection.is_connected}")
             return err
-        print("=>cursor connected")
         return True
 
     #create reactions table
@@ -421,6 +421,8 @@ class Application(Gtk.Application):
                 products varchar({col_max_len}),
                 extra_info varchar({col_max_len}));'''
             db_cursor.execute(create_reactions_table_sql_command)
+            print("=>created table 'reactions'")
+
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
                 print("=>reactions table found")
@@ -428,7 +430,7 @@ class Application(Gtk.Application):
             else:
                 print("eror while creating table \"reactions\"", err)
                 return err
-        print("=>created table 'reactions'")
+
         return True
     
     #save preferences into a file while closing application
