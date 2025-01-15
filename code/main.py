@@ -302,8 +302,13 @@ class Application(Gtk.Application):
         caller_action.set_state(state)
         #change the preference
         self.style_preference[caller_action.props.name]=state.get_string()
+
         #appearance page checkbuttons state update
         self.update_checkbuttons_state(caller_action,state)
+        #update the style preferences and change state again after updating the checkbuttons state
+        self.style_preference[caller_action.props.name]=state.get_string()
+        caller_action.set_state(state)
+
         #reload styles to apply the new style preference
         self.reload_styles()
     #update the state of settings page=>appearance settings=>general appearance settings checkbutton as the action's state updates

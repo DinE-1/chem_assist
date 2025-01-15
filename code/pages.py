@@ -521,6 +521,7 @@ class appearance_settings_box(Gtk.Box):
 
     #change appearance(for checkbuttons)
     def change_styles(self,check_button,style_providers_lists):
+        #update the styles according to the checkbutton value
         if check_button.props.active == False:
             for style_providers_list in style_providers_lists:
                 self.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(style_providers_list[0]))
