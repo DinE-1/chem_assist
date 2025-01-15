@@ -496,21 +496,21 @@ class appearance_settings_box(Gtk.Box):
         #general settings checkboxes
         #other styles
         self.styles_css_checkbox=Gtk.CheckButton.new_with_label("remove other styles")
-        self.styles_css_checkbox.connect('toggled',self.change_styles,(self.application.css_files_paths["round_css"],"shapes"))
+        self.styles_css_checkbox.connect('toggled',self.change_styles,[(self.application.css_files_paths["round_css"],"shapes"),(self.application.css_files_paths['app_css'],'app')])
         self.append(self.styles_css_checkbox)
         #color styles
         self.white_mode_css_checkbox=Gtk.CheckButton.new_with_label("white mode")
-        self.white_mode_css_checkbox.connect('toggled',self.change_styles,(self.application.css_files_paths["colorful_css"],"colors"))
+        self.white_mode_css_checkbox.connect('toggled',self.change_styles,[(self.application.css_files_paths["colorful_css"],"colors")])
         self.append(self.white_mode_css_checkbox)
         #button states
-        if self.application.style_preference['shapes'] != '':
-            self.styles_css_checkbox.props.active=False
-        else:
+        if self.application.style_preference['shapes'] == '' and self.application.style_preference['app'] == '':
             self.styles_css_checkbox.props.active=True
-        if self.application.style_preference['colors']!='':
-            self.white_mode_css_checkbox.props.active=False
         else:
+            self.styles_css_checkbox.props.active=False
+        if self.application.style_preference['colors']=='':
             self.white_mode_css_checkbox.props.active=True
+        else:
+            self.white_mode_css_checkbox.props.active=False
 
         #message label with scroll support
         message_label_scroll=Gtk.ScrolledWindow.new()
@@ -520,13 +520,17 @@ class appearance_settings_box(Gtk.Box):
         self.application.props.active_window.message_label=self.message_label
 
     #change appearance(for checkbuttons)
-    def change_styles(self,check_button,style_providers_list):
+    def change_styles(self,check_button,style_providers_lists):
         if check_button.props.active == False:
-            self.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(style_providers_list[0]))
-            self.application.style_preference[style_providers_list[1]]=style_providers_list[0]
+            for style_providers_list in style_providers_lists:
+                self.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(style_providers_list[0]))
+                self.application.style_preference[style_providers_list[1]]=style_providers_list[0]
         else:
-            self.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(''))
-            self.application.style_preference[style_providers_list[1]]=''
+            default_style_name=''
+            for style_providers_list in style_providers_lists:
+                self.application.change_action_state(style_providers_list[1],GLib.Variant.new_string(default_style_name))
+                self.application.style_preference[style_providers_list[1]]=default_style_name
+
         self.application.reload_styles()
 
     def update_window_opacity(self,slider):
@@ -860,65 +864,65 @@ class main_menu_page(Gtk.ApplicationWindow):
         super().__init__(*args,**kwargs,title="Chemistry assistant main page")
         self.add_css_class("main_menu")
 
+        #main box
         main_menu_page_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,0)
         self.set_child(main_menu_page_box)
 
-        #boxes
-        #message box
-        message_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
+        #message box(top box)
+        #scroll
         message_box_scroller=Gtk.ScrolledWindow()
         message_box_scroller.set_propagate_natural_height(True)
-        message_box_scroller.set_child(message_box)
-        #main menu buttons box
-        main_menu_buttons_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
-        main_menu_buttons_box.set_valign(Gtk.Align.CENTER)
-        main_menu_buttons_box.set_halign(Gtk.Align.CENTER)
-
-        #scroll
-        #scroll for main menu buttons box
-        main_menu_buttons_box_scroller=Gtk.ScrolledWindow()
-        main_menu_buttons_box_scroller.set_vexpand(True)
-        main_menu_buttons_box_scroller.set_child(main_menu_buttons_box)
-        main_menu_buttons_box_scroller.set_propagate_natural_height(True)
-
         main_menu_page_box.append(message_box_scroller)
-        main_menu_page_box.append(main_menu_buttons_box_scroller)
+        #box
+        message_box=Gtk.Box.new(Gtk.Orientation.HORIZONTAL,0)
+        message_box_scroller.set_child(message_box)
 
+        #settings button
+        settings_button=Gtk.Button.new()
+        settings_button.add_css_class('icon_button')
+        settings_button.add_css_class('settings_button')
+        settings_button.set_tooltip_text('settings')
+        settings_button.connect('clicked',self.props.application.open_page,settings_page)
+        message_box.append(settings_button)
         #message label
         self.message_label=Gtk.Label.new()
         message_box.append(self.message_label)
-
-        #buttons
-        reactions_button=Gtk.Button.new_with_label("reactions")
-        quiz_button=Gtk.Button.new_with_label("quiz")
-        quit_button=Gtk.Button.new_with_label("quit")
-        simulator_button=Gtk.Button.new_with_label("search reaction")
-        settings_button=Gtk.Button.new()
-
-        #add buttons to box
-        main_menu_buttons_box.append(reactions_button)
-        main_menu_buttons_box.append(quiz_button)
-        main_menu_buttons_box.append(simulator_button)
-        main_menu_buttons_box.append(quit_button)
-        message_box.append(settings_button)
-
-        #set the default hightlighted widget
-        self.set_default_widget(self.get_first_child().get_first_child().get_next_sibling().get_first_child().get_first_child().get_first_child())
-
-        #css
-        simulator_button.add_css_class('reactions_button_main_menu')
-        reactions_button.add_css_class('reactions_button_main_menu')
-        settings_button.add_css_class('icon_button')
-        settings_button.add_css_class('settings_button')
+        
+        #main menu buttons box
+        #scroll
+        main_menu_buttons_box_scroller=Gtk.ScrolledWindow()
+        main_menu_buttons_box_scroller.set_vexpand(True)
+        main_menu_buttons_box_scroller.set_propagate_natural_height(True)
+        main_menu_page_box.append(main_menu_buttons_box_scroller)
+        #box
+        main_menu_buttons_box=Gtk.Box.new(Gtk.Orientation.VERTICAL,10)
+        main_menu_buttons_box_scroller.set_child(main_menu_buttons_box)
         main_menu_buttons_box.add_css_class("main_menu_buttons_box")
-        add_css_class_to_children(main_menu_buttons_box,"main_menu_buttons_box")
+        main_menu_buttons_box.set_valign(Gtk.Align.CENTER)
+        main_menu_buttons_box.set_halign(Gtk.Align.CENTER)
 
-        #button functions
+        #main menu buttons
+        #reactions
+        reactions_button=Gtk.Button.new_with_label("reactions")
+        reactions_button.add_css_class('reactions_button_main_menu')
         reactions_button.set_action_name('app.open_reactions_page')
+        main_menu_buttons_box.append(reactions_button)
+        #quiz
+        quiz_button=Gtk.Button.new_with_label("quiz")
         quiz_button.set_action_name('app.open_quiz_page')
-        quit_button.set_action_name('app.quit')
+        main_menu_buttons_box.append(quiz_button)
+        #search reaction
+        simulator_button=Gtk.Button.new_with_label("search reaction")
+        simulator_button.add_css_class('reactions_button_main_menu')
         simulator_button.connect('clicked',self.props.application.open_page,simulator_page)
-        settings_button.connect('clicked',self.props.application.open_page,settings_page)
+        main_menu_buttons_box.append(simulator_button)
+        #quit
+        quit_button=Gtk.Button.new_with_label("quit")
+        quit_button.set_action_name('app.quit')
+        main_menu_buttons_box.append(quit_button)
+
+        #add a css class to buttons in main menu buttons box
+        add_css_class_to_children(main_menu_buttons_box,"main_menu_buttons_box")
 
 #login page
 class login_page(Gtk.ApplicationWindow):
