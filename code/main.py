@@ -61,8 +61,7 @@ class Application(Gtk.Application):
     db_name=preferences['database_name']
     db_cursor=None
     database_connection=None
-
-    #users
+    #sql users
     users={'':'',"chem_assist_user":"chem_assist_user_password"}
 
     #columns for reactions table in database

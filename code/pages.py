@@ -1546,42 +1546,42 @@ class simulator_page(Gtk.ApplicationWindow):
     
     #look for reactions table in database
     def search_for_reactions_table(self):
-        #search for database
+        #search for database name in information schema database
         db_search_sql_command=f"select SCHEMA_NAME from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME='{self.props.application.db_name}'"
         self.props.application.db_cursor.execute(db_search_sql_command)
-        db_search_result=self.props.application.db_cursor.fetchone()[0]
-        #exit function if database not found
-        if self.search_result_error_handle(db_search_result,self.props.application.db_name,"database") != True:
+        #check if database is found
+        try:
+            db_search_result=self.props.application.db_cursor.fetchone()
+            db_name=db_search_result[0]
+            self.display(f'database \'{db_name}\' found')
+        except Exception as e:
+            if db_search_result is None:
+                self.display(f'Database \'{self.props.application.db_name}\' not found, retry connecting to database server in database settings for creating a new database(or enter reactions page for creating a new database and a new reactions table)')
+            else:
+                self.display(f'Error while looking for sql database \'{self.props.application.db_name}\'',e)
             return False
-        
+
+        #use the current database in SQL
         self.props.application.db_cursor.execute(f"use {self.props.application.db_name}")
         
         #search for table
         table_name='reactions'
         reactions_table_search_command=f"select TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = '{self.props.application.db_name}' and TABLE_NAME='{table_name}';"
         self.props.application.db_cursor.execute(reactions_table_search_command)
-        table_search_result=self.props.application.db_cursor.fetchone()[0]
-        #exit function if table not found
-        if self.search_result_error_handle(table_search_result,table_name,"table") != True:
+        #check if table is found
+        try:
+            table_search_result=self.props.application.db_cursor.fetchone()
+            result_table_name=table_search_result[0]
+            self.display(f'table \'{result_table_name}\' found')
+        except Exception as e:
+            if table_search_result is None:
+                self.display(f'Table \'{table_name}\' not found, enter the reactions page for creating a new table and adding entries')
+            else:
+                self.display(f'Error while looking for table \'{table_name}\' ',err)
             return False
+
         return True
 
-    #display message according to search result
-    def search_result_error_handle(self,search_result,search_item,category=""):
-        if search_result == None :
-            message=f"{search_item} {category} not found"
-            self.display(message)
-            return False
-        elif search_result == search_item:
-            message=f"{search_item} {category} found"
-            self.display(message)
-        else:
-            message="??unknown case"
-            print(search_item)
-            print(search_results)
-            self.display(message)
-            return False
-        return True
     #display a message in console and on gtk window
     def display(self,message):
         print(message)
