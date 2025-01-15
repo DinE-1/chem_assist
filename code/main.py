@@ -24,9 +24,9 @@ preferences_default={
     #user customised css file name
     'user_custom_css_file_name':'custom.css',
     #max number of windows to store in window history list
-    'window_history_limit':10,
+    'window_history_limit':'10',
     #settings page side panel expanded or not
-    'settings_page_side_panel_expanded':True
+    'settings_page_side_panel_expanded':'True'
 }
 
 #paths of css files
@@ -132,6 +132,10 @@ class Application(Gtk.Application):
         custom_css_action=Gio.SimpleAction.new_stateful('custom_css',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference['custom_css']))
         self.add_action(custom_css_action)
         custom_css_action.connect('activate',self.css_reload_and_change_action_state)
+        #app css
+        app_css_action=Gio.SimpleAction.new_stateful('app',GLib.VariantType.new('s'),GLib.Variant.new_string(self.style_preference['app']))
+        self.add_action(app_css_action)
+        app_css_action.connect('activate',self.css_reload_and_change_action_state)
 
         #page opening actions
         open_reactions_page_action=Gio.SimpleAction.new("open_reactions_page",None)
@@ -294,12 +298,12 @@ class Application(Gtk.Application):
             Gtk.StyleContext.add_provider_for_display(self.default_display,css_provider,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
     #GioSimpleactionAction function
     def css_reload_and_change_action_state(self,caller_action,state):
-        #appearance page checkbuttons state update
-        self.update_checkbuttons_state(caller_action,state)
         #set the action state
         caller_action.set_state(state)
         #change the preference
         self.style_preference[caller_action.props.name]=state.get_string()
+        #appearance page checkbuttons state update
+        self.update_checkbuttons_state(caller_action,state)
         #reload styles to apply the new style preference
         self.reload_styles()
     #update the state of settings page=>appearance settings=>general appearance settings checkbutton as the action's state updates
@@ -310,14 +314,14 @@ class Application(Gtk.Application):
         if self.window_history[-1] == pages.settings_page:
             if self.props.active_window.current_page=='appearance_settings':
                 if action_name=='shapes':
-                    if state_name=='':
+                    if self.style_preference['shapes']=='' and self.style_preference['app'] == '':
                         self.props.active_window.settings_page_scroll.get_child().get_child().styles_css_checkbox.props.active=True
-                    elif state_name == self.css_files_paths['round_css']:
+                    else:
                         self.props.active_window.settings_page_scroll.get_child().get_child().styles_css_checkbox.props.active=False
                 elif action_name=='colors':
-                    if state_name=='':
+                    if self.style_preference['colors']=='':
                         self.props.active_window.settings_page_scroll.get_child().get_child().white_mode_css_checkbox.props.active=True
-                    elif state_name==self.css_files_paths['colorful_css'] or state_name==self.css_files_paths['black_shade_css']:
+                    else:
                         self.props.active_window.settings_page_scroll.get_child().get_child().white_mode_css_checkbox.props.active=False
     ##database
     #database connect and use
