@@ -52,6 +52,6 @@ row:hover{
 row.sidebar-row:selected{
     background: rgba(42, 81, 3, 0.483);
 }
-image.sidebar-icon{
+image{
     color: white;
 }
