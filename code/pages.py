@@ -1233,6 +1233,11 @@ class reactions_display_page(Gtk.ApplicationWindow):
         insert_rows_string=''
         #add reactions into sql command string and do not import if reaction already present in reactions table
         for row in csv_file_result:            
+            #if reaction header is found then do not import it
+            if row[0] == 'name' and row[1] == 'reactants' and row[2] == 'products' and row[3] == 'extra_info':
+                print(f"(import) ignoring header ({','.join(row)})")
+                continue
+
             #count the number of reactions with same name as current reaction, if found do not add reaction into sql command
             try:
                 self.props.application.db_cursor.execute(f"select count(*) from reactions where name='{row[0]}'")
@@ -1251,7 +1256,7 @@ class reactions_display_page(Gtk.ApplicationWindow):
         if insert_rows_string == '':
             print('(import)nothing to import')
             return
-        
+
         #remove the starting character (,)
         insert_rows_string=insert_rows_string[1:]
         insert_into_db_sql_command=f'insert ignore into reactions ({columns_string}) values {insert_rows_string};'
@@ -1272,7 +1277,7 @@ class reactions_display_page(Gtk.ApplicationWindow):
     #export current reactions to a csv_file
     def export_reaction_to_csv_file(self,caller_obj):
         #get the reactions from sql database
-        get_reactions_sql_command='select name,reactants,products,extra_info from reactions;'
+        get_reactions_sql_command=f'select {','.join(self.props.application.reactions_table_columns)} from reactions;'
         self.props.application.db_cursor.execute(get_reactions_sql_command)
         fetched_reactions=self.props.application.db_cursor.fetchall()
 
