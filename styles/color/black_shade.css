@@ -1,4 +1,4 @@
-window{
+window,stack{
     background-color:black;
 }
 headerbar{
@@ -42,4 +42,16 @@ highlight{
 }
 separator{
     background-color: rgb(74, 74, 21);
+}
+placessidebar,list,actionbar,gridview{
+    background-color: rgba(245, 222, 179, 0);
+}
+row:hover{
+    background: rgba(11, 11, 93, 0.539);
+}
+row.sidebar-row:selected{
+    background: rgba(42, 81, 3, 0.483);
+}
+image.sidebar-icon{
+    color: white;
 }

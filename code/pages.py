@@ -1,13 +1,14 @@
-import os,gi,mysql.connector
+import os,gi,mysql.connector,csv
 gi.require_version("Gtk","4.0")
 from gi.repository import Gtk,Gio,GObject,GLib
+from mysql.connector import errorcode
 
 #read a file
 def read_file(file_path):
     try:
         file=open(file_path,'r')
     except Exception as e:
-        print(e)
+        print('Error while reading file',e)
     file_contents=file.read()
     file.close()
     return file_contents
@@ -626,7 +627,7 @@ class appearance_settings_box(Gtk.Box):
             except KeyError as e:
                 print(f'{category}->{style} in custom css file not found')
             except Exception as e:
-                print(e)
+                print('Dictionary error while processing styles',e)
         #rounded_edges css file read
         css_file_path=self.application.css_files_paths['round_css']
         css_file_contents=read_file(css_file_path)
@@ -638,7 +639,7 @@ class appearance_settings_box(Gtk.Box):
         except KeyError as e:
             print(f'{category}->{style} not found in rounded_edges css file')
         except Exception as e:
-            print(e)
+            print('Dictionary error while processing styles',e)
 
         print(f'style {style} from {category} not found while searching custom and rounded_edges css files')
         return ''
@@ -1149,11 +1150,13 @@ class reactions_display_page(Gtk.ApplicationWindow):
         self.reactions_column_manager.append_column(reaction_column)
         self.reactions_column_manager.append_column(extra_info_column)
         self.reactions_column_manager.set_vexpand(True)
+        #edit row function
+        self.reactions_column_manager.connect('activate',self.edit_row)
 
         ##bottom panel
         refresh_button=Gtk.Button.new()
-        # reactions_db_import_button=Gtk.Button.new_with_label("Import")
-        # reactions_db_export_button=Gtk.Button.new_with_label("Export")
+        reactions_db_import_button=Gtk.Button.new_with_label("Import")
+        reactions_db_export_button=Gtk.Button.new_with_label("Export")
         reactions_db_add_button=Gtk.Button.new_with_label("Add")
         reaction_edit_button=Gtk.Button.new_with_label("edit")
         reaction_remove_button=Gtk.Button.new_with_label("delete")
@@ -1171,21 +1174,141 @@ class reactions_display_page(Gtk.ApplicationWindow):
             reactions_page_bottom_panel_box.append(reaction_edit_button)
             reactions_page_bottom_panel_box.append(reaction_remove_button)
             reactions_page_bottom_panel_box.append(reactions_db_add_button)
-            #reactions_page_bottom_panel_box.append(reactions_db_import_button)
-            #reactions_page_bottom_panel_box.append(reactions_db_export_button)
+            reactions_page_bottom_panel_box.append(reactions_db_import_button)
+            reactions_page_bottom_panel_box.append(reactions_db_export_button)
         #if there is not database connection, display message
         elif self.pull_data_from_reactions_table == False:
             no_connection_message=Gtk.Label.new("No database connection!")
             no_connection_message.set_vexpand(True)
             self.reactions_column_manager.set_vexpand(False)
             reactions_page_box.insert_child_after(no_connection_message,reactions_page_box.get_first_child())
+
         #button functions
         refresh_button.connect('clicked',self.refresh_reactions_list)
         reaction_edit_button.connect('clicked',self.edit_selected_reaction)
         reaction_remove_button.connect('clicked',self.remove_selected_reaction)
         reactions_db_add_button.connect('clicked',self.add_reaction_to_db)
-        #edit row function
-        self.reactions_column_manager.connect('activate',self.edit_row)
+        reactions_db_import_button.connect('clicked',self.import_reaction_to_csv_file)
+        reactions_db_export_button.connect('clicked',self.export_reaction_to_csv_file)
+
+    def import_reaction_to_csv_file(self,caller_obj):
+        #file choosing canceling object
+        file_chooser_cancel=Gio.Cancellable.new()
+
+        #filter list
+        filter_list=Gio.ListStore.new(Gtk.FileFilter)
+        #filter for selecting only text file
+        text_file_filter=Gtk.FileFilter.new()
+        text_file_filter.add_mime_type('text/plain')
+        filter_list.append(text_file_filter)
+
+        #file choser dialog
+        file_chooser=Gtk.FileDialog()
+        file_chooser.set_filters(filter_list)
+
+        #open a file chooser window
+        file_chooser.open(self,file_chooser_cancel,self.get_file_and_import_reactions)
+
+    #get file from dialog
+    def get_file_and_import_reactions(self,caller_obj,task_obj):
+        #get selected file path
+        try:
+            file_obj=caller_obj.open_finish(task_obj)
+            file_path=file_obj.get_path()
+            self.get_csv_rows_from_file_path_and_add_to_reactions_table(file_path)
+        except Exception as e:
+            print('Error opening file',e)
+    #read the file and get csv rows
+    def get_csv_rows_from_file_path_and_add_to_reactions_table(self,file_path):
+        #open the file
+        try:
+            file=open(file_path,'r',newline='')
+            csv_file_result=csv.reader(file)
+        except Exception as e:
+            print('error while opening file for reading csv values',e)
+            return
+
+        #insert the reactions into the sql database
+        columns_string=','.join(self.props.application.reactions_table_columns)
+        insert_rows_string=''
+        #add reactions into sql command string and do not import if reaction already present in reactions table
+        for row in csv_file_result:            
+            #count the number of reactions with same name as current reaction, if found do not add reaction into sql command
+            try:
+                self.props.application.db_cursor.execute(f"select count(*) from reactions where name='{row[0]}'")
+                if self.props.application.db_cursor.fetchone()[0] > 0:
+                    print(f"(import)reaction with name '{row[0]}' already in reactions table, skipping..")
+                    #do not add the reaction if it already exists in reactions table
+                    continue
+            except Exception as e:
+                print(f"error while counting number of records with name '{row[0]}'",e)
+
+            #add the reaction into a string for sql command
+            insert_rows_string=insert_rows_string + ",('" + "','".join(row) + "')"
+            print(f"(import)importing reaction with name '{row[0]}'")
+
+        #do not continue if reactions import string is empty
+        if insert_rows_string == '':
+            print('(import)nothing to import')
+            return
+        
+        #remove the starting character (,)
+        insert_rows_string=insert_rows_string[1:]
+        insert_into_db_sql_command=f'insert ignore into reactions ({columns_string}) values {insert_rows_string};'
+        #add to database
+        try:
+            self.props.application.db_cursor.execute(insert_into_db_sql_command)
+            self.props.application.database_connection.commit()
+            self.refresh_reactions_list(None)
+        except mysql.connector.Error as sql_error:
+            #check if record already exists in table
+            if sql_error.errno == errorcode.ER_DUP_ENTRY:
+                print(f"??reaction '{str(sql_error).split('\'')[1]}' already exists in reactions table, skipping..",sql_error)
+            else:
+                print('SQL Error while inserting reactions into reactions table',sql_error)
+        except Exception as e:
+            print(f"Error while importing reactions into reactions table from csv file '{file}' ",e)
+
+    #export current reactions to a csv_file
+    def export_reaction_to_csv_file(self,caller_obj):
+        #get the reactions from sql database
+        get_reactions_sql_command='select name,reactants,products,extra_info from reactions;'
+        self.props.application.db_cursor.execute(get_reactions_sql_command)
+        fetched_reactions=self.props.application.db_cursor.fetchall()
+
+        #create a list of all reactions with a heading
+        reactions_list=[self.props.application.reactions_table_columns]
+        reactions_list.extend(fetched_reactions)
+
+        #open file chooser window and export the reactions to a file
+        #file choser dialog
+        file_chooser=Gtk.FileDialog()
+        #file choosing canceling object
+        file_chooser_cancel=Gio.Cancellable.new()
+        #save file
+        file_chooser.save(self,file_chooser_cancel,self.get_file_path_from_file_dialog_and_export_reaction_to_csv_file,reactions_list)
+    #get file from file chooser dialog and write as csv file
+    def get_file_path_from_file_dialog_and_export_reaction_to_csv_file(self,file_dialog,task_obj,reactions_list):
+        try:
+            file=file_dialog.save_finish(task_obj)
+            file_path=file.get_path()
+            self.write_list_to_csv_file_path(reactions_list,file_path)
+        except Exception as e:
+            print('error getting file path while exporting reaction',e)
+    #write a records list to csv file
+    def write_list_to_csv_file_path(self,r_list,file_path):
+        try:
+            #open the file
+            file_obj=open(file_path,'w',newline='')
+            #create a csv write object
+            csv_file_obj=csv.writer(file_obj)
+            #write the records list to the file
+            print(r_list)
+            csv_file_obj.writerows(r_list)
+        except Exception as e:
+            print('Error while writing reactions list to csv file',e)
+
+    #edit selected reaction
     def edit_selected_reaction(self,caller_obj):
         #open edit row page if a row is selected
         selected_row_number=self.reactions_list_single_selection.props.selected

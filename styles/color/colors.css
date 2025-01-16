@@ -1,4 +1,4 @@
-window{
+window,stack{
     background-image:linear-gradient(purple,rgb(47, 0, 255));
 }
 window.main_menu{
@@ -63,4 +63,13 @@ scrollbar{
 }
 separator{
     background-color:aqua;
+}
+placessidebar,list,actionbar,gridview{
+    background-color: rgba(245, 222, 179, 0);
+}
+row:hover{
+    background-color: rgba(176, 23, 49, 0.269);
+}
+row.sidebar-row:selected{
+    background: rgba(181, 142, 14, 0.506);
 }
